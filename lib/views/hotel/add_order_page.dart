@@ -64,8 +64,8 @@ class _AddOrderPageState extends State<AddOrderPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        title: const Text("Add Order"),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        title: const Text("Add Order", style: TextStyle(color: Colors.black)),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -269,15 +269,15 @@ class _AddOrderPageState extends State<AddOrderPage> {
             Expanded(
               flex: 3,
               child: DropdownButtonFormField<String>(
-                value: items[index]['itemId']!.isEmpty
+                value: (items[index]['itemId'] ?? '').isEmpty
                     ? null
                     : items[index]['itemId'],
                 items: itemsFromDb
                     .map(
                       (item) => DropdownMenuItem<String>(
-                        value: item['id'],
+                        value: item['id']?.toString() ?? '',
                         child: Text(
-                          item['name'],
+                          item['name']?.toString() ?? 'Unknown',
                           style: const TextStyle(color: Colors.black87),
                         ),
                       ),
@@ -302,7 +302,7 @@ class _AddOrderPageState extends State<AddOrderPage> {
             Expanded(
               flex: 2,
               child: TextFormField(
-                initialValue: items[index]['quantity'],
+                initialValue: items[index]['quantity'] ?? '',
                 style: const TextStyle(color: Colors.black87),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../auth/login_page.dart';
 import 'create_shop_page.dart';
+import 'product_list.dart';
 
 class SupplierDashboard extends StatefulWidget {
   const SupplierDashboard({super.key});
@@ -16,14 +17,16 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
   int totalItems = 0;
 
   String shopName = 'Loading...';
+  String shopEmail = 'Loading...';
 
   @override
   void initState() {
     super.initState();
     _fetchSummaryCounts();
-    _loadShopName();
+    _loadShopInfo();
   }
 
+  // Fetch count of shops and items
   Future<void> _fetchSummaryCounts() async {
     try {
       final shopsSnapshot = await FirebaseFirestore.instance
@@ -42,11 +45,13 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     }
   }
 
-  Future<void> _loadShopName() async {
+  // Load shop name and email based on current user
+  Future<void> _loadShopInfo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       setState(() {
         shopName = 'No User Signed In';
+        shopEmail = '';
       });
       return;
     }
@@ -58,12 +63,15 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
         .get();
 
     if (shopsSnapshot.docs.isNotEmpty) {
+      final data = shopsSnapshot.docs.first.data();
       setState(() {
-        shopName = shopsSnapshot.docs.first['name'] ?? 'Unnamed Shop';
+        shopName = data['name'] ?? 'Unnamed Shop';
+        shopEmail = data['email'] ?? 'No Email';
       });
     } else {
       setState(() {
         shopName = 'No Shop Found';
+        shopEmail = '';
       });
     }
   }
@@ -80,15 +88,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
           style: TextStyle(color: Colors.black),
         ),
         iconTheme: const IconThemeData(color: Colors.black),
-        // actions: [
-        //   IconButton(
-        //     icon: const Icon(Icons.refresh, color: Colors.black),
-        //     onPressed: () {
-        //       // _loadData();
-        //       // _loadHistoryData();
-        //     },
-        //   ),
-        // ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -127,6 +126,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
+  // Summary card widget
   Widget _buildSummaryCard(
     String title,
     int count,
@@ -167,6 +167,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
+  // Drawer widget
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: const Color.fromARGB(255, 24, 24, 24),
@@ -175,25 +176,17 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
-            accountName: const Text(
-              "Blue Ocean Hotel",
-              style: TextStyle(color: Colors.white),
+            accountName: Text(
+              shopName,
+              style: const TextStyle(color: Colors.white),
             ),
-            accountEmail: const Text(
-              "Main Kitchen",
-              style: TextStyle(color: Colors.white70),
+            accountEmail: Text(
+              shopEmail,
+              style: const TextStyle(color: Colors.white70),
             ),
-            currentAccountPicture: GestureDetector(
-              // onTap: () {
-              //   Navigator.push(
-              //     context,
-              //     MaterialPageRoute(builder: (_) => const EditProfilePage()),
-              //   );
-              // },
-              child: const CircleAvatar(
-                backgroundColor: Colors.grey,
-                child: Icon(Icons.person, size: 40, color: Colors.white),
-              ),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.person, size: 40, color: Colors.white),
             ),
           ),
           _buildDrawerItem(Icons.home, 'Shops', () {
@@ -201,22 +194,13 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
               context,
             ).push(MaterialPageRoute(builder: (context) => CreateShopPage()));
           }),
-          // _buildDrawerItem(Icons.list_alt, 'Order List', () {
-          //   Navigator.of(
-          //     context,
-          //   ).push(MaterialPageRoute(builder: (context) => OrderListPage()));
-          // }),
-          // _buildDrawerItem(Icons.inventory, 'Items', () {
-          //   Navigator.of(
-          //     context,
-          //   ).push(MaterialPageRoute(builder: (_) => const ItemsListPage()));
-          // }),
-          // _buildDrawerItem(Icons.shopping_cart, 'Shops', () {
-          //   Navigator.of(
-          //     context,
-          //   ).push(MaterialPageRoute(builder: (_) => const ShopListPage()));
-          // }),
-          _buildDrawerItem(Icons.logout, 'Logout', () {
+          _buildDrawerItem(Icons.shopping_cart, 'items', () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => ItemList()));
+          }),
+          _buildDrawerItem(Icons.logout, 'Logout', () async {
+            await FirebaseAuth.instance.signOut();
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -227,6 +211,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
+  // Drawer menu item
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.white),

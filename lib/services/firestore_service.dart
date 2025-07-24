@@ -23,21 +23,38 @@ class FirestoreService {
     });
   }
 
+  /// ✅ FIXED: Now includes document ID as 'id'
   Future<List<Map<String, dynamic>>> getShops() async {
     final querySnapshot = await _firestore.collection('shops').get();
-    return querySnapshot.docs.map((doc) => doc.data()).toList();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id; // Include document ID
+      return data;
+    }).toList();
   }
 
+  /// ✅ FIXED: Now includes document ID as 'id'
   Future<List<Map<String, dynamic>>> getItems() async {
     final querySnapshot = await _firestore.collection('items').get();
-    return querySnapshot.docs.map((doc) => doc.data()).toList();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id; // Include document ID
+      return data;
+    }).toList();
   }
 
+  /// ✅ Optional: Stream version (if needed for real-time updates)
   Stream<List<Map<String, dynamic>>> getItemsStream() {
     return _firestore
         .collection('items')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id; // Include ID
+            return data;
+          }).toList(),
+        );
   }
 
   Future<int> getTotalOrders() async {
@@ -63,7 +80,6 @@ class FirestoreService {
 
   /// ----------------- SUPPLIER / SHOP METHODS -----------------
 
-  // Add a new shop for the logged-in supplier
   Future<void> addShop({
     required String name,
     required String location,
@@ -72,17 +88,20 @@ class FirestoreService {
   }) async {
     final uid = _auth.currentUser!.uid;
 
-    await _firestore.collection('shops').add({
+    final shopRef = _firestore.collection('shops').doc();
+    final shopId = shopRef.id;
+
+    await shopRef.set({
       'name': name,
       'location': location,
       'contact': contact,
       'items': items,
       'supplierId': uid,
+      'shopId': shopId,
       'createdAt': Timestamp.now(),
     });
   }
 
-  // Stream of current supplier's shops
   Stream<QuerySnapshot> getUserShops() {
     final uid = _auth.currentUser!.uid;
     return _firestore
@@ -91,7 +110,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Get the current logged-in user's username
   Future<String?> getCurrentUserName() async {
     final uid = _auth.currentUser!.uid;
     final doc = await _firestore.collection('users').doc(uid).get();
