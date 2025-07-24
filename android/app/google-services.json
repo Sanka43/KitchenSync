@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362923892269",
+    "project_id": "smartkitchen-dd50c",
+    "storage_bucket": "smartkitchen-dd50c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362923892269:android:7ca45a384ed1a7fea2e2a4",
+        "android_client_info": {
+          "package_name": "com.example.kitchensync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDl6z4Bd_HWkzkYQ762gilhdXviVXSLfJ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
