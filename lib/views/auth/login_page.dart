@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'register_page.dart';
 import '../../services/auth_service.dart';
 import '../hotel/dashboard.dart';
-import '../supplier/dashboard.dart';
+import '../supplier/create_shop_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -87,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const SupplierDashboard(),
+                                  builder: (_) => const CreateShopPage(),
                                 ),
                               );
                             }

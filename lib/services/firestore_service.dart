@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  /// ----------------- ORDER METHODS -----------------
 
   Future<void> createOrder({
     required String hotelId,
@@ -11,6 +15,7 @@ class FirestoreService {
   }) async {
     await _firestore.collection('orders').add({
       'hotelId': hotelId,
+      'shopId': shopId,
       'items': items,
       'note': note,
       'status': 'pending',
@@ -33,5 +38,66 @@ class FirestoreService {
         .collection('items')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+  }
+
+  Future<int> getTotalOrders() async {
+    final snapshot = await _firestore.collection('orders').get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> getPendingBills() async {
+    final snapshot = await _firestore
+        .collection('orders')
+        .where('status', isEqualTo: 'pending')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  Future<int> getDeliveredOrders() async {
+    final snapshot = await _firestore
+        .collection('orders')
+        .where('status', isEqualTo: 'delivered')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  /// ----------------- SUPPLIER / SHOP METHODS -----------------
+
+  // Add a new shop for the logged-in supplier
+  Future<void> addShop({
+    required String name,
+    required String location,
+    required String contact,
+    required List<String> items,
+  }) async {
+    final uid = _auth.currentUser!.uid;
+
+    await _firestore.collection('shops').add({
+      'name': name,
+      'location': location,
+      'contact': contact,
+      'items': items,
+      'supplierId': uid,
+      'createdAt': Timestamp.now(),
+    });
+  }
+
+  // Stream of current supplier's shops
+  Stream<QuerySnapshot> getUserShops() {
+    final uid = _auth.currentUser!.uid;
+    return _firestore
+        .collection('shops')
+        .where('supplierId', isEqualTo: uid)
+        .snapshots();
+  }
+
+  // Get the current logged-in user's username
+  Future<String?> getCurrentUserName() async {
+    final uid = _auth.currentUser!.uid;
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      return doc.data()?['username'];
+    }
+    return null;
   }
 }
