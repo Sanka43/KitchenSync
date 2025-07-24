@@ -118,4 +118,17 @@ class FirestoreService {
     }
     return null;
   }
+
+  // ITEM METHODS
+  Future<List<String>> getItemsForShop(String shopId) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('shops')
+        .doc(shopId)
+        .get();
+    if (doc.exists) {
+      final data = doc.data();
+      return List<String>.from(data?['items'] ?? []);
+    }
+    return [];
+  }
 }

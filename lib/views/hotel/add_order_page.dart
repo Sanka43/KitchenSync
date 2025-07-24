@@ -14,13 +14,12 @@ class _AddOrderPageState extends State<AddOrderPage> {
 
   List<Map<String, dynamic>> shops = [];
   List<Map<String, dynamic>> itemsFromDb = [];
+  List<String> shopItemList = [];
 
   String? selectedShopId;
-
   List<Map<String, String>> items = [
     {'itemId': '', 'quantity': ''},
   ];
-
   final TextEditingController noteController = TextEditingController();
 
   bool isSubmitting = false;
@@ -37,12 +36,22 @@ class _AddOrderPageState extends State<AddOrderPage> {
       final fetchedShops = await firestoreService.getShops();
       final fetchedItems = await firestoreService.getItems();
 
+      String? defaultShopId = fetchedShops.isNotEmpty
+          ? fetchedShops.first['id']
+          : null;
+      List<String> defaultShopItems = [];
+
+      if (defaultShopId != null) {
+        defaultShopItems = await firestoreService.getItemsForShop(
+          defaultShopId,
+        );
+      }
+
       setState(() {
         shops = fetchedShops;
         itemsFromDb = fetchedItems;
-        if (shops.isNotEmpty) {
-          selectedShopId = shops.first['id'];
-        }
+        selectedShopId = defaultShopId;
+        shopItemList = defaultShopItems;
         isLoading = false;
       });
     } catch (e) {
@@ -64,7 +73,8 @@ class _AddOrderPageState extends State<AddOrderPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         title: const Text("Add Order", style: TextStyle(color: Colors.black)),
       ),
       body: isLoading
@@ -77,36 +87,67 @@ class _AddOrderPageState extends State<AddOrderPage> {
                   children: [
                     const Text(
                       'Select Target Shop',
-                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                      style: TextStyle(
+                        color: Color.fromARGB(221, 0, 0, 0),
+                        fontSize: 20,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: selectedShopId,
-                      items: shops
-                          .map(
-                            (shop) => DropdownMenuItem<String>(
-                              value: shop['id'],
-                              child: Text(
-                                shop['name'],
-                                style: const TextStyle(color: Colors.black87),
-                              ),
+                      dropdownColor: const Color.fromARGB(198, 0, 0, 0),
+                      items: shops.map((shop) {
+                        return DropdownMenuItem<String>(
+                          value: shop['id'],
+                          child: Text(
+                            shop['name'],
+                            style: const TextStyle(
+                              color: Color.fromARGB(221, 255, 255, 255),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) async {
                         setState(() {
                           selectedShopId = value;
+                          shopItemList = [];
                         });
+
+                        if (value != null) {
+                          final shopItems = await firestoreService
+                              .getItemsForShop(value);
+                          setState(() {
+                            shopItemList = shopItems;
+                          });
+                        }
                       },
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: Colors.grey.shade200,
+                        fillColor: const Color.fromARGB(255, 0, 0, 0),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
+                    if (shopItemList.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Available Items in Shop:',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          // const SizedBox(height: 6),
+                          // Wrap(
+                          //   spacing: 8,
+                          //   children: shopItemList
+                          //       .map((item) => Chip(label: Text(item)))
+                          //       .toList(),
+                          // ),
+                          // const SizedBox(height: 20),
+                        ],
+                      ),
                     const Text(
                       'Order Items',
                       style: TextStyle(color: Colors.black87, fontSize: 18),
@@ -245,7 +286,7 @@ class _AddOrderPageState extends State<AddOrderPage> {
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.9),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -266,23 +307,25 @@ class _AddOrderPageState extends State<AddOrderPage> {
         padding: const EdgeInsets.only(bottom: 12.0),
         child: Row(
           children: [
+            // Dropdown: Items from selected shop
             Expanded(
               flex: 3,
               child: DropdownButtonFormField<String>(
                 value: (items[index]['itemId'] ?? '').isEmpty
                     ? null
                     : items[index]['itemId'],
-                items: itemsFromDb
-                    .map(
-                      (item) => DropdownMenuItem<String>(
-                        value: item['id']?.toString() ?? '',
-                        child: Text(
-                          item['name']?.toString() ?? 'Unknown',
-                          style: const TextStyle(color: Colors.black87),
-                        ),
+                dropdownColor: const Color.fromARGB(198, 0, 0, 0),
+                items: shopItemList.map((itemName) {
+                  return DropdownMenuItem<String>(
+                    value: itemName,
+                    child: Text(
+                      itemName,
+                      style: const TextStyle(
+                        color: Color.fromARGB(221, 255, 255, 255),
                       ),
-                    )
-                    .toList(),
+                    ),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   setState(() {
                     items[index]['itemId'] = value ?? '';
@@ -290,8 +333,12 @@ class _AddOrderPageState extends State<AddOrderPage> {
                 },
                 decoration: InputDecoration(
                   hintText: 'Select Item',
+                  hintStyle: TextStyle(
+                    color: const Color.fromARGB(255, 255, 255, 255),
+                  ),
                   filled: true,
-                  fillColor: Colors.grey.shade200,
+                  fillColor: const Color.fromARGB(255, 0, 0, 0),
+
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -299,11 +346,11 @@ class _AddOrderPageState extends State<AddOrderPage> {
               ),
             ),
             const SizedBox(width: 10),
+
+            // Quantity Input
             Expanded(
               flex: 2,
               child: TextFormField(
-                initialValue: items[index]['quantity'] ?? '',
-                style: const TextStyle(color: Colors.black87),
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   items[index]['quantity'] = value;
@@ -311,13 +358,15 @@ class _AddOrderPageState extends State<AddOrderPage> {
                 decoration: InputDecoration(
                   hintText: 'Qty',
                   filled: true,
-                  fillColor: Colors.grey.shade200,
+                  fillColor: const Color.fromARGB(255, 0, 0, 0),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ),
+
+            // Remove Button
             if (index != 0)
               IconButton(
                 onPressed: () {
@@ -334,11 +383,11 @@ class _AddOrderPageState extends State<AddOrderPage> {
   Widget _buildTextField(TextEditingController controller, String hint) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: Colors.black87),
+      style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
-        fillColor: Colors.grey.shade200,
+        fillColor: const Color.fromARGB(255, 0, 0, 0),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
