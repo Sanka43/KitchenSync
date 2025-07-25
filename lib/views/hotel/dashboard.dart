@@ -25,9 +25,9 @@ class _HotelDashboardState extends State<HotelDashboard> {
 
   List<Map<String, dynamic>> _items = [];
   double _todayUsage = 0;
-
   List<FlSpot> _historySpots = [];
   bool _isLoadingHistory = true;
+  String _hotelName = "Loading...";
 
   @override
   void initState() {
@@ -39,10 +39,34 @@ class _HotelDashboardState extends State<HotelDashboard> {
   Future<void> _loadData() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
+      if (userId == null) {
+        debugPrint("User is null");
+        return;
+      }
 
+      // Fetch items and today's usage
       final items = await _realtimeService.fetchItems();
       final usage = await _usageService.getTodayUsage(userId);
+
+      // Fetch hotel/shop name where supplierId == current userId
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('shops')
+          .where('supplierId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final shopData = querySnapshot.docs.first.data();
+        debugPrint("Shop document found: $shopData");
+        setState(() {
+          _hotelName = shopData['name'] ?? 'Unnamed Hotel';
+        });
+      } else {
+        debugPrint("No shop found for supplierId: $userId");
+        setState(() {
+          _hotelName = "Hotel Not Found";
+        });
+      }
 
       setState(() {
         _items = items;
@@ -52,6 +76,9 @@ class _HotelDashboardState extends State<HotelDashboard> {
       await _usageService.saveTodayUsage(userId, _todayUsage);
     } catch (e) {
       debugPrint("Error loading dashboard data: $e");
+      setState(() {
+        _hotelName = "Error loading hotel name";
+      });
     }
   }
 
@@ -306,9 +333,9 @@ class _HotelDashboardState extends State<HotelDashboard> {
         children: [
           UserAccountsDrawerHeader(
             decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
-            accountName: const Text(
-              "Blue Ocean Hotel",
-              style: TextStyle(color: Colors.white),
+            accountName: Text(
+              _hotelName,
+              style: const TextStyle(color: Colors.white),
             ),
             accountEmail: const Text(
               "Main Kitchen",
@@ -327,11 +354,6 @@ class _HotelDashboardState extends State<HotelDashboard> {
               ),
             ),
           ),
-          // _buildDrawerItem(Icons.add_shopping_cart, 'Add Order', () {
-          //   Navigator.of(
-          //     context,
-          //   ).push(MaterialPageRoute(builder: (context) => AddOrderPage()));
-          // }),
           _buildDrawerItem(Icons.list_alt, 'Order List', () {
             Navigator.of(
               context,

@@ -12,6 +12,25 @@ class SupplierOrderListPage extends StatefulWidget {
 }
 
 class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
+  final Map<String, String> _hotelNameCache = {}; // Cache hotel names
+
+  Future<String> _getHotelName(String hotelId) async {
+    if (_hotelNameCache.containsKey(hotelId)) {
+      return _hotelNameCache[hotelId]!;
+    }
+
+    final doc = await FirebaseFirestore.instance
+        .collection('hotels')
+        .doc(hotelId)
+        .get();
+    final name = doc.exists
+        ? doc['name'] ?? 'Unnamed Hotel'
+        : 'Hotel Not Found';
+
+    _hotelNameCache[hotelId] = name;
+    return name;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,44 +70,61 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
               final items = List<Map<String, dynamic>>.from(
                 order['items'] ?? [],
               );
+              final hotelId = order['hotelId'] ?? '';
 
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order Date: $formattedDate',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+              return FutureBuilder<String>(
+                future: _getHotelName(hotelId),
+                builder: (context, snapshot) {
+                  final hotelName = snapshot.data ?? 'Loading...';
+
+                  return Card(
+                    elevation: 3,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hotel: $hotelName',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Order Date: $formattedDate',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...items.map((item) {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  item['itemId'] ?? 'Unnamed',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                Text(
+                                  'Qty: ${item['quantity'] ?? '0'}',
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      ...items.map((item) {
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              item['itemId'] ?? 'Unnamed',
-                              style: const TextStyle(fontSize: 15),
-                            ),
-                            Text(
-                              'Qty: ${item['quantity'] ?? '0'}',
-                              style: const TextStyle(fontSize: 15),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );
