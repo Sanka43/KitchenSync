@@ -329,11 +329,11 @@ class _HotelDashboardState extends State<HotelDashboard> {
               ),
             ),
           ),
-          _buildDrawerItem(Icons.add_shopping_cart, 'Add Order', () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => AddOrderPage()));
-          }),
+          // _buildDrawerItem(Icons.add_shopping_cart, 'Add Order', () {
+          //   Navigator.of(
+          //     context,
+          //   ).push(MaterialPageRoute(builder: (context) => AddOrderPage()));
+          // }),
           _buildDrawerItem(Icons.list_alt, 'Order List', () {
             Navigator.of(
               context,
