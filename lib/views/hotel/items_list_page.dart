@@ -43,7 +43,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
             child: TextField(
               onChanged: (value) =>
                   setState(() => _searchQuery = value.toLowerCase()),
-              style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search items...',
                 hintStyle: const TextStyle(
@@ -51,10 +51,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
                 ),
                 filled: true,
                 fillColor: const Color.fromARGB(161, 0, 0, 0),
-                prefixIcon: const Icon(
-                  Icons.search,
-                  color: Color.fromARGB(255, 255, 255, 255),
-                ),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -65,8 +62,15 @@ class _ItemsListPageState extends State<ItemsListPage> {
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('items').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('items')
+            .orderBy('itemName') // optional sorting
+            .snapshots(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
           if (snapshot.hasError) {
             return const Center(
               child: Text(
@@ -111,6 +115,8 @@ class _ItemsListPageState extends State<ItemsListPage> {
 
               return Card(
                 color: const Color.fromARGB(255, 0, 0, 0),
+                elevation: 4,
+                margin: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -119,10 +125,54 @@ class _ItemsListPageState extends State<ItemsListPage> {
                     name,
                     style: const TextStyle(color: Colors.white, fontSize: 20),
                   ),
-                  subtitle: Text(
-                    'Stock: $stock',
-                    style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Stock: $stock',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Builder(
+                        builder: (context) {
+                          final int maxStock =
+                              data['maxStock'] ??
+                              100; // Default to 100 if not present
+                          final double percentage = (stock / maxStock).clamp(
+                            0.0,
+                            1.0,
+                          );
+
+                          Color progressColor;
+                          if (percentage <= 0.25) {
+                            progressColor = Colors.red;
+                          } else if (percentage <= 0.5) {
+                            progressColor = Colors.orange;
+                          } else if (percentage <= 0.75) {
+                            progressColor = Colors.yellow;
+                          } else {
+                            progressColor = Colors.green;
+                          }
+
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: percentage,
+                              minHeight: 8,
+                              backgroundColor: Colors.white24,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                progressColor,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
+
                   trailing: const Icon(Icons.edit, color: Colors.white70),
                   onTap: () {
                     Navigator.push(
@@ -175,6 +225,9 @@ class _ItemsListPageState extends State<ItemsListPage> {
                   .doc(docId)
                   .delete();
               Navigator.pop(context);
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('"$itemName" deleted')));
             },
           ),
         ],
