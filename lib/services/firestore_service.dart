@@ -23,27 +23,27 @@ class FirestoreService {
     });
   }
 
-  /// ✅ FIXED: Now includes document ID as 'id'
+  /// Get all shops (with document ID included)
   Future<List<Map<String, dynamic>>> getShops() async {
     final querySnapshot = await _firestore.collection('shops').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data();
-      data['id'] = doc.id; // Include document ID
+      data['id'] = doc.id;
       return data;
     }).toList();
   }
 
-  /// ✅ FIXED: Now includes document ID as 'id'
+  /// Get all items (with document ID included)
   Future<List<Map<String, dynamic>>> getItems() async {
     final querySnapshot = await _firestore.collection('items').get();
     return querySnapshot.docs.map((doc) {
       final data = doc.data();
-      data['id'] = doc.id; // Include document ID
+      data['id'] = doc.id;
       return data;
     }).toList();
   }
 
-  /// ✅ Optional: Stream version (if needed for real-time updates)
+  /// Optional real-time stream of items
   Stream<List<Map<String, dynamic>>> getItemsStream() {
     return _firestore
         .collection('items')
@@ -51,17 +51,19 @@ class FirestoreService {
         .map(
           (snapshot) => snapshot.docs.map((doc) {
             final data = doc.data();
-            data['id'] = doc.id; // Include ID
+            data['id'] = doc.id;
             return data;
           }).toList(),
         );
   }
 
+  /// Count of all orders
   Future<int> getTotalOrders() async {
     final snapshot = await _firestore.collection('orders').get();
     return snapshot.docs.length;
   }
 
+  /// Count of pending orders
   Future<int> getPendingBills() async {
     final snapshot = await _firestore
         .collection('orders')
@@ -70,6 +72,7 @@ class FirestoreService {
     return snapshot.docs.length;
   }
 
+  /// Count of delivered orders
   Future<int> getDeliveredOrders() async {
     final snapshot = await _firestore
         .collection('orders')
@@ -80,6 +83,7 @@ class FirestoreService {
 
   /// ----------------- SUPPLIER / SHOP METHODS -----------------
 
+  /// Add a new shop
   Future<void> addShop({
     required String name,
     required String location,
@@ -87,7 +91,6 @@ class FirestoreService {
     required List<String> items,
   }) async {
     final uid = _auth.currentUser!.uid;
-
     final shopRef = _firestore.collection('shops').doc();
     final shopId = shopRef.id;
 
@@ -102,6 +105,7 @@ class FirestoreService {
     });
   }
 
+  /// Get real-time stream of shops owned by the logged-in supplier
   Stream<QuerySnapshot> getUserShops() {
     final uid = _auth.currentUser!.uid;
     return _firestore
@@ -110,6 +114,7 @@ class FirestoreService {
         .snapshots();
   }
 
+  /// Get current logged-in user name (from 'users' collection)
   Future<String?> getCurrentUserName() async {
     final uid = _auth.currentUser!.uid;
     final doc = await _firestore.collection('users').doc(uid).get();
@@ -119,16 +124,39 @@ class FirestoreService {
     return null;
   }
 
-  // ITEM METHODS
+  /// Get list of item IDs assigned to the given shop
   Future<List<String>> getItemsForShop(String shopId) async {
-    final doc = await FirebaseFirestore.instance
-        .collection('shops')
-        .doc(shopId)
-        .get();
+    final doc = await _firestore.collection('shops').doc(shopId).get();
     if (doc.exists) {
       final data = doc.data();
       return List<String>.from(data?['items'] ?? []);
     }
     return [];
+  }
+
+  ///  Get list of shop IDs for the logged-in supplier
+  Future<List<String>> getShopIdsForCurrentSupplier() async {
+    final uid = _auth.currentUser!.uid;
+    final querySnapshot = await _firestore
+        .collection('shops')
+        .where('supplierId', isEqualTo: uid)
+        .get();
+
+    return querySnapshot.docs.map((doc) => doc.id).toList();
+  }
+
+  /// Get only the **first** shop ID (useful if supplier has 1 shop)
+  Future<String?> getFirstShopIdForCurrentSupplier() async {
+    final uid = _auth.currentUser!.uid;
+    final querySnapshot = await _firestore
+        .collection('shops')
+        .where('supplierId', isEqualTo: uid)
+        .limit(1)
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      return querySnapshot.docs.first.id;
+    }
+    return null;
   }
 }

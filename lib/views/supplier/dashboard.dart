@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../auth/login_page.dart';
 import 'create_shop_page.dart';
 import 'product_list.dart';
+import 'supplier_order_list_page.dart'; // Make sure to import this!
+import '../../services/firestore_service.dart';
 
 class SupplierDashboard extends StatefulWidget {
   const SupplierDashboard({super.key});
@@ -18,6 +20,9 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
 
   String shopName = 'Loading...';
   String shopEmail = 'Loading...';
+  String? shopId;
+
+  final FirestoreService firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -26,7 +31,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     _loadShopInfo();
   }
 
-  // Fetch count of shops and items
   Future<void> _fetchSummaryCounts() async {
     try {
       final shopsSnapshot = await FirebaseFirestore.instance
@@ -45,33 +49,34 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     }
   }
 
-  // Load shop name and email based on current user
   Future<void> _loadShopInfo() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        shopName = 'No User Signed In';
-        shopEmail = '';
-      });
-      return;
-    }
+    final shopDocId = await firestoreService.getFirstShopIdForCurrentSupplier();
 
-    final shopsSnapshot = await FirebaseFirestore.instance
-        .collection('shops')
-        .where('userId', isEqualTo: user.uid)
-        .limit(1)
-        .get();
+    if (shopDocId != null) {
+      final shopDoc = await FirebaseFirestore.instance
+          .collection('shops')
+          .doc(shopDocId)
+          .get();
 
-    if (shopsSnapshot.docs.isNotEmpty) {
-      final data = shopsSnapshot.docs.first.data();
-      setState(() {
-        shopName = data['name'] ?? 'Unnamed Shop';
-        shopEmail = data['email'] ?? 'No Email';
-      });
+      if (shopDoc.exists) {
+        final data = shopDoc.data();
+        setState(() {
+          shopName = data?['name'] ?? 'Unnamed Shop';
+          shopEmail = data?['contact'] ?? 'No Contact';
+          shopId = shopDocId;
+        });
+      } else {
+        setState(() {
+          shopName = 'Shop Not Found';
+          shopEmail = '';
+          shopId = null;
+        });
+      }
     } else {
       setState(() {
-        shopName = 'No Shop Found';
+        shopName = 'No Shop Linked';
         shopEmail = '';
+        shopId = null;
       });
     }
   }
@@ -126,7 +131,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
-  // Summary card widget
   Widget _buildSummaryCard(
     String title,
     int count,
@@ -167,7 +171,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
-  // Drawer widget
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       backgroundColor: const Color.fromARGB(255, 24, 24, 24),
@@ -190,14 +193,30 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
             ),
           ),
           _buildDrawerItem(Icons.home, 'Shops', () {
-            Navigator.of(
+            Navigator.push(
               context,
-            ).push(MaterialPageRoute(builder: (context) => CreateShopPage()));
+              MaterialPageRoute(builder: (_) => const CreateShopPage()),
+            );
           }),
-          _buildDrawerItem(Icons.shopping_cart, 'items', () {
-            Navigator.of(
+          _buildDrawerItem(Icons.shopping_cart, 'Orders', () {
+            if (shopId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SupplierOrderListPage(shopId: shopId!),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Shop ID not found.')),
+              );
+            }
+          }),
+          _buildDrawerItem(Icons.shopping_bag, 'Items', () {
+            Navigator.push(
               context,
-            ).push(MaterialPageRoute(builder: (context) => ItemList()));
+              MaterialPageRoute(builder: (_) => ItemList()),
+            );
           }),
           _buildDrawerItem(Icons.logout, 'Logout', () async {
             await FirebaseAuth.instance.signOut();
@@ -211,7 +230,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
-  // Drawer menu item
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: Colors.white),
