@@ -180,97 +180,128 @@ class _AddOrderPageState extends State<AddOrderPage> {
                     const SizedBox(height: 6),
                     _buildTextField(noteController, "Enter a note"),
                     const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: isSubmitting
-                          ? null
-                          : () async {
-                              FocusScope.of(context).unfocus();
-                              setState(() => isSubmitting = true);
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: isSubmitting
+                            ? null
+                            : () async {
+                                FocusScope.of(context).unfocus();
+                                setState(() => isSubmitting = true);
 
-                              try {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user == null) {
-                                  throw Exception("User not logged in");
-                                }
-                                if (selectedShopId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Please select a shop"),
-                                    ),
+                                try {
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+                                  if (user == null)
+                                    throw Exception("User not logged in");
+
+                                  if (selectedShopId == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Please select a shop"),
+                                      ),
+                                    );
+                                    setState(() => isSubmitting = false);
+                                    return;
+                                  }
+
+                                  final filteredItems = items.where((item) {
+                                    final qtyValid =
+                                        int.tryParse(item['quantity'] ?? '') !=
+                                            null &&
+                                        int.parse(item['quantity']!) > 0;
+                                    final itemSelected =
+                                        (item['itemId'] ?? '').isNotEmpty;
+                                    return qtyValid && itemSelected;
+                                  }).toList();
+
+                                  if (filteredItems.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "Please add at least one valid item with quantity > 0",
+                                        ),
+                                      ),
+                                    );
+                                    setState(() => isSubmitting = false);
+                                    return;
+                                  }
+
+                                  await firestoreService.createOrder(
+                                    hotelId: user.uid,
+                                    shopId: selectedShopId!,
+                                    items: filteredItems,
+                                    note: noteController.text.trim(),
                                   );
-                                  setState(() => isSubmitting = false);
-                                  return;
-                                }
 
-                                final filteredItems = items.where((item) {
-                                  final qtyValid =
-                                      int.tryParse(item['quantity'] ?? '') !=
-                                          null &&
-                                      int.parse(item['quantity']!) > 0;
-                                  final itemSelected =
-                                      (item['itemId'] ?? '').isNotEmpty;
-                                  return qtyValid && itemSelected;
-                                }).toList();
-
-                                if (filteredItems.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        "Please add at least one valid item with quantity > 0",
+                                        "Order submitted successfully",
                                       ),
                                     ),
                                   );
+
+                                  setState(() {
+                                    items = [
+                                      {'itemId': '', 'quantity': ''},
+                                    ];
+                                    noteController.clear();
+                                    isSubmitting = false;
+                                  });
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Error: $e")),
+                                  );
                                   setState(() => isSubmitting = false);
-                                  return;
                                 }
-
-                                await firestoreService.createOrder(
-                                  hotelId: user.uid,
-                                  shopId: selectedShopId!,
-                                  items: filteredItems,
-                                  note: noteController.text.trim(),
-                                );
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Order submitted successfully",
-                                    ),
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isSubmitting
+                              ? const Color.fromARGB(255, 93, 93, 93)
+                              : Color(0xFF00C853),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          shadowColor: Colors.teal.withOpacity(0),
+                          elevation: 10,
+                        ),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  key: ValueKey('loader'),
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
                                   ),
-                                );
-
-                                setState(() {
-                                  items = [
-                                    {'itemId': '', 'quantity': ''},
-                                  ];
-                                  noteController.clear();
-                                  isSubmitting = false;
-                                });
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text("Error: $e")),
-                                );
-                                setState(() => isSubmitting = false);
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.teal,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 40,
-                          vertical: 15,
+                                )
+                              : const Row(
+                                  key: ValueKey('text'),
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.send,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Submit Order",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        shadowColor: Colors.tealAccent,
-                        elevation: 10,
                       ),
-                      child: isSubmitting
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              "Submit Order",
-                              style: TextStyle(fontSize: 16),
-                            ),
                     ),
                   ],
                 ),
