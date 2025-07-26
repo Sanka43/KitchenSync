@@ -4,11 +4,19 @@ import 'package:flutter/material.dart';
 import '../auth/login_page.dart';
 import 'create_shop_page.dart';
 import 'product_list.dart';
-import 'supplier_order_list_page.dart'; // Make sure to import this!
-import '../../services/firestore_service.dart';
+import 'supplier_order_list_page.dart';
 
 class SupplierDashboard extends StatefulWidget {
-  const SupplierDashboard({super.key});
+  final String shopId;
+  final String shopName;
+  final String shopContact;
+
+  const SupplierDashboard({
+    super.key,
+    required this.shopId,
+    required this.shopName,
+    required this.shopContact,
+  });
 
   @override
   State<SupplierDashboard> createState() => _SupplierDashboardState();
@@ -18,17 +26,10 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
   int totalShops = 0;
   int totalItems = 0;
 
-  String shopName = 'Loading...';
-  String shopEmail = 'Loading...';
-  String? shopId;
-
-  final FirestoreService firestoreService = FirestoreService();
-
   @override
   void initState() {
     super.initState();
     _fetchSummaryCounts();
-    _loadShopInfo();
   }
 
   Future<void> _fetchSummaryCounts() async {
@@ -46,38 +47,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
       });
     } catch (e) {
       print('Error fetching counts: $e');
-    }
-  }
-
-  Future<void> _loadShopInfo() async {
-    final shopDocId = await firestoreService.getFirstShopIdForCurrentSupplier();
-
-    if (shopDocId != null) {
-      final shopDoc = await FirebaseFirestore.instance
-          .collection('shops')
-          .doc(shopDocId)
-          .get();
-
-      if (shopDoc.exists) {
-        final data = shopDoc.data();
-        setState(() {
-          shopName = data?['name'] ?? 'Unnamed Shop';
-          shopEmail = data?['contact'] ?? 'No Contact';
-          shopId = shopDocId;
-        });
-      } else {
-        setState(() {
-          shopName = 'Shop Not Found';
-          shopEmail = '';
-          shopId = null;
-        });
-      }
-    } else {
-      setState(() {
-        shopName = 'No Shop Linked';
-        shopEmail = '';
-        shopId = null;
-      });
     }
   }
 
@@ -131,6 +100,67 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: const Color.fromARGB(255, 24, 24, 24),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
+            accountName: Text(
+              widget.shopName,
+              style: const TextStyle(color: Colors.white),
+            ),
+            accountEmail: Text(
+              widget.shopContact,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.store, size: 40, color: Colors.white),
+            ),
+          ),
+          _buildDrawerItem(Icons.home, 'Shops', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateShopPage()),
+            );
+          }),
+          _buildDrawerItem(Icons.shopping_cart, 'Orders', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SupplierOrderListPage(shopId: widget.shopId),
+              ),
+            );
+          }),
+          _buildDrawerItem(Icons.shopping_bag, 'Items', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => ItemList()),
+            );
+          }),
+          _buildDrawerItem(Icons.logout, 'Logout', () async {
+            await FirebaseAuth.instance.signOut();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.white),
+      title: Text(title, style: const TextStyle(color: Colors.white)),
+      onTap: onTap,
+    );
+  }
+
   Widget _buildSummaryCard(
     String title,
     int count,
@@ -168,73 +198,6 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      backgroundColor: const Color.fromARGB(255, 24, 24, 24),
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
-            accountName: Text(
-              shopName,
-              style: const TextStyle(color: Colors.white),
-            ),
-            accountEmail: Text(
-              shopEmail,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.person, size: 40, color: Colors.white),
-            ),
-          ),
-          _buildDrawerItem(Icons.home, 'Shops', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateShopPage()),
-            );
-          }),
-          _buildDrawerItem(Icons.shopping_cart, 'Orders', () {
-            if (shopId != null) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SupplierOrderListPage(shopId: shopId!),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Shop ID not found.')),
-              );
-            }
-          }),
-          _buildDrawerItem(Icons.shopping_bag, 'Items', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ItemList()),
-            );
-          }),
-          _buildDrawerItem(Icons.logout, 'Logout', () async {
-            await FirebaseAuth.instance.signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      onTap: onTap,
     );
   }
 }

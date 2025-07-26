@@ -81,16 +81,17 @@ class _CreateShopPageState extends State<CreateShopPage> {
                   ),
                   subtitle: Text(
                     shop['location'],
-                    style: const TextStyle(
-                      // fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: const TextStyle(fontSize: 18),
                   ),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const SupplierDashboard(),
+                        builder: (_) => SupplierDashboard(
+                          shopId: shop.id,
+                          shopName: shop['name'],
+                          shopContact: shop['contact'],
+                        ),
                       ),
                     );
                   },

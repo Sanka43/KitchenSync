@@ -114,7 +114,7 @@ class FirestoreService {
         .snapshots();
   }
 
-  /// Get current logged-in user name (from 'users' collection)
+  /// Get current logged-in user's name (from 'users' collection)
   Future<String?> getCurrentUserName() async {
     final uid = _auth.currentUser!.uid;
     final doc = await _firestore.collection('users').doc(uid).get();
@@ -134,7 +134,7 @@ class FirestoreService {
     return [];
   }
 
-  ///  Get list of shop IDs for the logged-in supplier
+  /// Get list of shop IDs for the logged-in supplier
   Future<List<String>> getShopIdsForCurrentSupplier() async {
     final uid = _auth.currentUser!.uid;
     final querySnapshot = await _firestore
@@ -145,7 +145,7 @@ class FirestoreService {
     return querySnapshot.docs.map((doc) => doc.id).toList();
   }
 
-  /// Get only the **first** shop ID (useful if supplier has 1 shop)
+  /// Get first shop ID for supplier (used before when no shop selection was available)
   Future<String?> getFirstShopIdForCurrentSupplier() async {
     final uid = _auth.currentUser!.uid;
     final querySnapshot = await _firestore
@@ -156,6 +156,30 @@ class FirestoreService {
 
     if (querySnapshot.docs.isNotEmpty) {
       return querySnapshot.docs.first.id;
+    }
+    return null;
+  }
+
+  /// 🆕 Get a specific shop by ID (full data)
+  Future<Map<String, dynamic>?> getShopById(String shopId) async {
+    final doc = await _firestore.collection('shops').doc(shopId).get();
+    if (doc.exists) {
+      final data = doc.data();
+      data?['id'] = doc.id;
+      return data;
+    }
+    return null;
+  }
+
+  /// 🆕 Get just name and contact for a shop
+  Future<Map<String, String>?> getShopInfo(String shopId) async {
+    final doc = await _firestore.collection('shops').doc(shopId).get();
+    if (doc.exists) {
+      final data = doc.data();
+      return {
+        'name': data?['name'] ?? 'Unnamed Shop',
+        'contact': data?['contact'] ?? '',
+      };
     }
     return null;
   }

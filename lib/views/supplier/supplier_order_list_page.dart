@@ -12,7 +12,7 @@ class SupplierOrderListPage extends StatefulWidget {
 }
 
 class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
-  final Map<String, String> _hotelNameCache = {}; // Cache hotel names
+  final Map<String, String> _hotelNameCache = {};
 
   Future<String> _getHotelName(String hotelId) async {
     if (_hotelNameCache.containsKey(hotelId)) {
@@ -63,10 +63,10 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
             itemCount: orders.length,
             itemBuilder: (context, index) {
               final order = orders[index];
-              final createdAt = (order['createdAt'] as Timestamp).toDate();
-              final formattedDate = DateFormat(
-                'yyyy-MM-dd – hh:mm a',
-              ).format(createdAt);
+              final createdAt = (order['createdAt'] as Timestamp?)?.toDate();
+              final formattedDate = createdAt != null
+                  ? DateFormat('yyyy-MM-dd – hh:mm a').format(createdAt)
+                  : 'Unknown';
               final items = List<Map<String, dynamic>>.from(
                 order['items'] ?? [],
               );
