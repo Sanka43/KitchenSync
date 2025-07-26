@@ -10,6 +10,7 @@ import 'edit_profile_page.dart';
 import 'order_list_page.dart';
 import 'items_list_page.dart';
 import 'shop_list_page.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 
 class HotelDashboard extends StatefulWidget {
   const HotelDashboard({super.key});
@@ -19,6 +20,8 @@ class HotelDashboard extends StatefulWidget {
 }
 
 class _HotelDashboardState extends State<HotelDashboard> {
+  final String hotelId = FirebaseAuth.instance.currentUser!.uid;
+  final String currentHotelId = FirebaseAuth.instance.currentUser!.uid;
   final RealtimeService _realtimeService = RealtimeService();
   final services_usage.UsageService _usageService =
       services_usage.UsageService();
@@ -365,9 +368,12 @@ class _HotelDashboardState extends State<HotelDashboard> {
             ).push(MaterialPageRoute(builder: (_) => const ItemsListPage()));
           }),
           _buildDrawerItem(Icons.shopping_cart, 'Shops', () {
-            Navigator.of(
+            Navigator.push(
               context,
-            ).push(MaterialPageRoute(builder: (_) => const ShopListPage()));
+              MaterialPageRoute(
+                builder: (context) => ShopListPage(hotelId: currentHotelId),
+              ),
+            );
           }),
           _buildDrawerItem(Icons.logout, 'Logout', () {
             Navigator.pushReplacement(

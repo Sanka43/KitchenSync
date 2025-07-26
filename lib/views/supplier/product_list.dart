@@ -3,15 +3,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ItemList extends StatefulWidget {
-  const ItemList({super.key});
+  final String shopId;
+  const ItemList({super.key, required this.shopId});
 
   @override
   State<ItemList> createState() => _ItemListState();
 }
 
 class _ItemListState extends State<ItemList> {
-  String? shopDocId; // Firestore document ID of the shop document
-  String? customShopId; // Your custom shopId field inside document
+  String? shopDocId; // Firestore document ID of the shop
+  String? customShopId; // Custom shopId field from Firestore
   List<String> items = [];
   bool loading = true;
 
@@ -22,41 +23,25 @@ class _ItemListState extends State<ItemList> {
   }
 
   Future<void> _loadShopItems() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() {
-        loading = false;
-      });
-      return;
-    }
-
     try {
-      // Query shop by supplierId = current user UID
-      final shopQuery = await FirebaseFirestore.instance
+      final shopDoc = await FirebaseFirestore.instance
           .collection('shops')
-          .where('supplierId', isEqualTo: user.uid)
-          .limit(1)
+          .doc(widget.shopId)
           .get();
 
-      if (shopQuery.docs.isEmpty) {
+      if (!shopDoc.exists) {
         setState(() {
           loading = false;
         });
         return;
       }
 
-      final doc = shopQuery.docs.first;
-      final data = doc.data();
-
-      // Read your custom shopId field
-      final myShopId = data['shopId'] as String?;
-
-      // Read items array (list of strings)
+      final data = shopDoc.data()!;
       List<dynamic> rawItems = data['items'] ?? [];
 
       setState(() {
-        shopDocId = doc.id;
-        customShopId = myShopId;
+        shopDocId = shopDoc.id;
+        customShopId = data['shopId'] as String?;
         items = rawItems.map((e) => (e as String).trim()).toList();
         loading = false;
       });
@@ -210,7 +195,7 @@ class _ItemListState extends State<ItemList> {
                       item.toUpperCase(),
                       style: const TextStyle(
                         color: Color.fromARGB(255, 255, 255, 255),
-                        fontSize: 20, // Set font size to 20
+                        fontSize: 20,
                       ),
                     ),
                     trailing: Row(

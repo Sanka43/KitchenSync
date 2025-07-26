@@ -57,9 +57,9 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Supplier Dashboard',
-          style: TextStyle(color: Colors.black),
+        title: Text(
+          '${widget.shopName}',
+          style: const TextStyle(color: Colors.black),
         ),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
@@ -138,7 +138,9 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
           _buildDrawerItem(Icons.shopping_bag, 'Items', () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => ItemList()),
+              MaterialPageRoute(
+                builder: (_) => ItemList(shopId: widget.shopId),
+              ),
             );
           }),
           _buildDrawerItem(Icons.logout, 'Logout', () async {

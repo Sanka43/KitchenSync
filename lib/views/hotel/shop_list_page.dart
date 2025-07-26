@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_shop_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ShopListPage extends StatefulWidget {
-  const ShopListPage({super.key});
+  final String hotelId;
+
+  const ShopListPage({super.key, required this.hotelId});
 
   @override
   State<ShopListPage> createState() => _ShopListPageState();
@@ -12,10 +15,37 @@ class ShopListPage extends StatefulWidget {
 class _ShopListPageState extends State<ShopListPage> {
   Map<String, dynamic>? _selectedShop;
   String? _selectedDocId;
+  Map<String, String> supplierNames = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSupplierNames();
+  }
+
+  Future<void> _loadSupplierNames() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'supplier')
+        .get();
+
+    final Map<String, String> tempMap = {};
+    for (var doc in snapshot.docs) {
+      tempMap[doc['uid']] = doc['username'];
+    }
+
+    setState(() {
+      supplierNames = tempMap;
+    });
+  }
 
   void _showDetails(DocumentSnapshot doc) {
+    final shop = doc.data() as Map<String, dynamic>;
+    final supplierId = shop['supplierId'];
+    final ownerName = supplierNames[supplierId] ?? 'Unknown';
+
     setState(() {
-      _selectedShop = doc.data() as Map<String, dynamic>;
+      _selectedShop = {...shop, 'owner': ownerName};
       _selectedDocId = doc.id;
     });
   }
@@ -42,7 +72,7 @@ class _ShopListPageState extends State<ShopListPage> {
     final nameController = TextEditingController(text: _selectedShop?['name']);
     final ownerController = TextEditingController(
       text: _selectedShop?['owner'],
-    );
+    ); // Not editable now
     final mobileController = TextEditingController(
       text: _selectedShop?['number'],
     );
@@ -60,10 +90,6 @@ class _ShopListPageState extends State<ShopListPage> {
             TextField(
               controller: nameController,
               decoration: const InputDecoration(labelText: 'Shop Name'),
-            ),
-            TextField(
-              controller: ownerController,
-              decoration: const InputDecoration(labelText: 'Owner Name'),
             ),
             TextField(
               controller: mobileController,
@@ -87,7 +113,6 @@ class _ShopListPageState extends State<ShopListPage> {
                   .doc(_selectedDocId)
                   .update({
                     'name': nameController.text.trim(),
-                    'owner': ownerController.text.trim(),
                     'number': mobileController.text.trim(),
                     'location': locationController.text.trim(),
                   });
@@ -130,7 +155,7 @@ class _ShopListPageState extends State<ShopListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.black),
         backgroundColor: Colors.white,
@@ -153,7 +178,8 @@ class _ShopListPageState extends State<ShopListPage> {
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('shops')
-                  .orderBy('timestamp', descending: true)
+                  .where('hotelId', isEqualTo: widget.hotelId)
+                  .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
