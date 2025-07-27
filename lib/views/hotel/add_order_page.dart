@@ -149,8 +149,11 @@ class _AddOrderPageState extends State<AddOrderPage> {
                         ],
                       ),
                     const Text(
-                      'Order Items',
-                      style: TextStyle(color: Colors.black87, fontSize: 18),
+                      'Order Items (kg/l)',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 0, 0, 0),
+                        fontSize: 18,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     ..._buildItemFields(),
@@ -191,8 +194,9 @@ class _AddOrderPageState extends State<AddOrderPage> {
                                 try {
                                   final user =
                                       FirebaseAuth.instance.currentUser;
-                                  if (user == null)
+                                  if (user == null) {
                                     throw Exception("User not logged in");
+                                  }
 
                                   if (selectedShopId == null) {
                                     ScaffoldMessenger.of(context).showSnackBar(

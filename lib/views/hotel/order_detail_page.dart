@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 class OrderDetailPage extends StatelessWidget {
   final DocumentSnapshot orderDoc;
 
-  const OrderDetailPage({Key? key, required this.orderDoc}) : super(key: key);
+  const OrderDetailPage({super.key, required this.orderDoc});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +94,7 @@ class OrderDetailPage extends StatelessWidget {
                   ),
                 ),
               );
-            }).toList(),
+            }),
             const SizedBox(height: 20),
 
             // Status Card

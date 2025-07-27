@@ -4,7 +4,7 @@ import 'order_detail_page.dart';
 import 'add_order_page.dart';
 
 class OrderListPage extends StatelessWidget {
-  const OrderListPage({Key? key}) : super(key: key);
+  const OrderListPage({super.key});
 
   Future<String> _getShopName(String shopId) async {
     final shopDoc = await FirebaseFirestore.instance
@@ -41,10 +41,12 @@ class OrderListPage extends StatelessWidget {
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No orders found'));
+          }
 
           final orders = snapshot.data!.docs;
 

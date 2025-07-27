@@ -55,8 +55,9 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
               .orderBy('createdAt', descending: true)
               .snapshots(),
           builder: (context, snapshot) {
-            if (!snapshot.hasData)
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
 
             final orders = snapshot.data!.docs;
 

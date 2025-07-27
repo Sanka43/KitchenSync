@@ -58,7 +58,7 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: Text(
-          '${widget.shopName}',
+          widget.shopName,
           style: const TextStyle(color: Colors.black),
         ),
         iconTheme: const IconThemeData(color: Colors.black),

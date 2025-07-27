@@ -10,7 +10,6 @@ import 'edit_profile_page.dart';
 import 'order_list_page.dart';
 import 'items_list_page.dart';
 import 'shop_list_page.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
 
 class HotelDashboard extends StatefulWidget {
   const HotelDashboard({super.key});
@@ -20,112 +19,78 @@ class HotelDashboard extends StatefulWidget {
 }
 
 class _HotelDashboardState extends State<HotelDashboard> {
-  final String hotelId = FirebaseAuth.instance.currentUser!.uid;
-  final String currentHotelId = FirebaseAuth.instance.currentUser!.uid;
+  final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
   final RealtimeService _realtimeService = RealtimeService();
   final services_usage.UsageService _usageService =
       services_usage.UsageService();
 
   List<Map<String, dynamic>> _items = [];
+  int _totalShops = 0;
   double _todayUsage = 0;
-  List<FlSpot> _historySpots = [];
-  bool _isLoadingHistory = true;
   String _hotelName = "Loading...";
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _loadHistoryData();
   }
 
   Future<void> _loadData() async {
+    setState(() => _isLoading = true);
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) {
-        debugPrint("User is null");
+      final shopQuery = await FirebaseFirestore.instance
+          .collection('shops')
+          .where('supplierId', isEqualTo: currentUserId)
+          .get();
+
+      if (shopQuery.docs.isEmpty) {
+        setState(() {
+          _hotelName = "No shop found";
+          _totalShops = 0;
+          _items = [];
+          _isLoading = false;
+        });
         return;
       }
 
-      // Fetch items and today's usage
-      final items = await _realtimeService.fetchItems();
-      final usage = await _usageService.getTodayUsage(userId);
+      final shop = shopQuery.docs.first.data();
+      final itemNames = List<String>.from(shop['items'] ?? []);
 
-      // Fetch hotel/shop name where supplierId == current userId
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('shops')
-          .where('supplierId', isEqualTo: userId)
-          .limit(1)
+      final itemsSnapshot = await FirebaseFirestore.instance
+          .collection('items')
           .get();
+      final relevantItems = itemsSnapshot.docs
+          .where((doc) => itemNames.contains(doc['itemName']))
+          .map((doc) => doc.data())
+          .toList();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        final shopData = querySnapshot.docs.first.data();
-        debugPrint("Shop document found: $shopData");
-        setState(() {
-          _hotelName = shopData['name'] ?? 'Unnamed Hotel';
-        });
-      } else {
-        debugPrint("No shop found for supplierId: $userId");
-        setState(() {
-          _hotelName = "Hotel Not Found";
-        });
-      }
+      final usage = await _usageService.getTodayUsage(currentUserId);
 
       setState(() {
-        _items = items;
+        _items = relevantItems;
+        _totalShops = shopQuery.docs.length;
         _todayUsage = usage;
+        _hotelName = shop['name'] ?? 'Unnamed Hotel';
+        _isLoading = false;
       });
 
-      await _usageService.saveTodayUsage(userId, _todayUsage);
+      await _usageService.saveTodayUsage(currentUserId, _todayUsage);
     } catch (e) {
-      debugPrint("Error loading dashboard data: $e");
+      debugPrint("Error loading data: $e");
       setState(() {
-        _hotelName = "Error loading hotel name";
-      });
-    }
-  }
-
-  Future<void> _loadHistoryData() async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
-
-      final snapshot = await FirebaseFirestore.instance
-          .collection('usage_history')
-          .where('userId', isEqualTo: userId)
-          .orderBy('date')
-          .get();
-
-      final spots = <FlSpot>[];
-      int index = 0;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        double usage = 0;
-        if (data['usage'] is num) {
-          usage = (data['usage'] as num).toDouble();
-        }
-        spots.add(FlSpot(index.toDouble(), usage));
-        index++;
-      }
-
-      setState(() {
-        _historySpots = spots;
-        _isLoadingHistory = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading history data: $e');
-      setState(() {
-        _isLoadingHistory = false;
+        _hotelName = "Error loading data";
+        _isLoading = false;
       });
     }
   }
 
   int get _lowStockCount => _items.where((item) {
-    final quantity = item['quantity'];
-    if (quantity is int) {
-      return quantity <= 10;
-    } else if (quantity is String) {
-      return int.tryParse(quantity) != null && int.parse(quantity) <= 10;
+    final stock = item['stock'];
+    if (stock is int) return stock <= 10;
+    if (stock is String) {
+      final parsed = int.tryParse(stock);
+      return parsed != null && parsed <= 10;
     }
     return false;
   }).length;
@@ -146,185 +111,40 @@ class _HotelDashboardState extends State<HotelDashboard> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black),
-            onPressed: () {
-              _loadData();
-              _loadHistoryData();
-            },
+            onPressed: _loadData,
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth < 600 ? 1 : 2;
-            return GridView.count(
-              crossAxisCount: crossAxisCount,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 20,
-              crossAxisSpacing: 20,
-              children: [
-                _buildGlassCard(
-                  child: _buildStatBox(
-                    "Low Stock",
-                    "$_lowStockCount",
-                    icon: Icons.warning,
-                  ),
-                ),
-                _buildGlassCard(
-                  child: _buildStatBox(
-                    "Today's Usage",
-                    "${_todayUsage.toStringAsFixed(1)} kg",
-                    icon: Icons.bar_chart,
-                  ),
-                ),
-                _buildGlassCard(child: _buildHistory()),
-                _buildGlassCard(
-                  child: _buildPlaceholderChart("Low Stock Alerts"),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGlassCard({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.3)),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String title, String value, {IconData? icon}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (icon != null)
-          Icon(icon, size: 36, color: Colors.white.withOpacity(0.9)),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, color: Colors.white),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final crossAxisCount = constraints.maxWidth < 600 ? 1 : 2;
+                  final itemWidth =
+                      (constraints.maxWidth - (16.0 * (crossAxisCount - 1))) /
+                      crossAxisCount;
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      SizedBox(width: itemWidth, child: _buildSummaryCard()),
+                      SizedBox(
+                        width: itemWidth,
+                        height: 300,
+                        child: _buildStockChart(),
+                      ),
+                      SizedBox(
+                        width: itemWidth,
+                        height: 300,
+                        child: _buildLowStockList(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistory() {
-    if (_isLoadingHistory) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_historySpots.isEmpty) {
-      return const Center(child: Text('No history data available'));
-    }
-
-    final maxY =
-        _historySpots.map((e) => e.y).reduce((a, b) => a > b ? a : b) + 5;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Usage History",
-          style: TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 380,
-          child: LineChart(
-            LineChartData(
-              minX: 0,
-              maxX: _historySpots.isNotEmpty
-                  ? (_historySpots.length - 1).toDouble()
-                  : 0,
-              minY: 0,
-              maxY: maxY,
-              gridData: FlGridData(show: true),
-              borderData: FlBorderData(show: true),
-              titlesData: FlTitlesData(
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: true, reservedSize: 40),
-                ),
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      return Text(
-                        'Day ${value.toInt() + 1}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.white60,
-                        ),
-                      );
-                    },
-                    interval: 1,
-                    reservedSize: 30,
-                  ),
-                ),
-              ),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: _historySpots,
-                  isCurved: true,
-                  color: Colors.lightBlueAccent,
-                  barWidth: 3,
-                  dotData: FlDotData(show: true),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlaceholderChart(String title) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          height: 100,
-          width: double.infinity,
-          alignment: Alignment.center,
-          child: const Text(
-            "Chart Placeholder",
-            style: TextStyle(color: Colors.redAccent),
-          ),
-        ),
-      ],
     );
   }
 
@@ -345,42 +165,50 @@ class _HotelDashboardState extends State<HotelDashboard> {
               style: TextStyle(color: Colors.white70),
             ),
             currentAccountPicture: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
-                );
-              },
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+              ),
               child: const CircleAvatar(
                 backgroundColor: Colors.grey,
                 child: Icon(Icons.person, size: 40, color: Colors.white),
               ),
             ),
           ),
-          _buildDrawerItem(Icons.list_alt, 'Order List', () {
-            Navigator.of(
+          _buildDrawerItem(
+            Icons.list_alt,
+            'Order List',
+            () => Navigator.push(
               context,
-            ).push(MaterialPageRoute(builder: (context) => OrderListPage()));
-          }),
-          _buildDrawerItem(Icons.inventory, 'Items', () {
-            Navigator.of(
+              MaterialPageRoute(builder: (_) => OrderListPage()),
+            ),
+          ),
+          _buildDrawerItem(
+            Icons.inventory,
+            'Items',
+            () => Navigator.push(
               context,
-            ).push(MaterialPageRoute(builder: (_) => const ItemsListPage()));
-          }),
-          _buildDrawerItem(Icons.shopping_cart, 'Shops', () {
-            Navigator.push(
+              MaterialPageRoute(builder: (_) => const ItemsListPage()),
+            ),
+          ),
+          _buildDrawerItem(
+            Icons.shopping_cart,
+            'Shops',
+            () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ShopListPage(hotelId: currentHotelId),
+                builder: (_) => ShopListPage(hotelId: currentUserId),
               ),
-            );
-          }),
-          _buildDrawerItem(Icons.logout, 'Logout', () {
-            Navigator.pushReplacement(
+            ),
+          ),
+          _buildDrawerItem(
+            Icons.logout,
+            'Logout',
+            () => Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const LoginPage()),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );
@@ -391,6 +219,149 @@ class _HotelDashboardState extends State<HotelDashboard> {
       leading: Icon(icon, color: Colors.white),
       title: Text(title, style: const TextStyle(color: Colors.white)),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Summary",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildSummaryRow("Total Items", _items.length.toString()),
+            const Divider(),
+            _buildSummaryRow("Low Stock Items", _lowStockCount.toString()),
+            const Divider(),
+            _buildSummaryRow("Total Shops", _totalShops.toString()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 16)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildLowStockList() {
+    final lowStockItems = _items.where((item) {
+      final stock = item['stock'];
+      if (stock is int) return stock <= 10;
+      if (stock is String) {
+        final parsed = int.tryParse(stock);
+        return parsed != null && parsed <= 10;
+      }
+      return false;
+    }).toList();
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Low Stock Items",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: lowStockItems.length,
+                itemBuilder: (context, index) {
+                  final item = lowStockItems[index];
+                  return ListTile(
+                    title: Text(item['itemName'] ?? 'Unnamed'),
+                    trailing: Text(item['stock'].toString()),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockChart() {
+    final chartItems = _items.take(5).toList();
+    final barGroups = chartItems.asMap().entries.map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      final stock = item['stock'] is int
+          ? (item['stock'] as int).toDouble()
+          : double.tryParse(item['stock'].toString()) ?? 0;
+
+      return BarChartGroupData(
+        x: index,
+        barRods: [BarChartRodData(toY: stock, color: Colors.blueAccent)],
+      );
+    }).toList();
+
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Stock Chart",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: BarChart(
+                BarChartData(
+                  barGroups: barGroups,
+                  titlesData: FlTitlesData(
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, _) {
+                          final index = value.toInt();
+                          return Text(
+                            index < chartItems.length
+                                ? chartItems[index]['itemName'] ?? ''
+                                : '',
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: true),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
