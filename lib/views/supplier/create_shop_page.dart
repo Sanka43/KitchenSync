@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/firestore_service.dart';
 import 'create_shop_form.dart';
 import 'dashboard.dart';
@@ -28,21 +29,26 @@ class _CreateShopPageState extends State<CreateShopPage> {
 
   @override
   Widget build(BuildContext context) {
+    const lightBackground = Color(0xFFF1F3F6);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightBackground,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 1,
         title: Text(
           'Welcome, ${username.toUpperCase()}',
-          style: const TextStyle(
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
             color: Colors.black,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            letterSpacing: 0.3,
           ),
         ),
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: Colors.black),
             onPressed: () {
               Navigator.push(
                 context,
@@ -60,41 +66,78 @@ class _CreateShopPageState extends State<CreateShopPage> {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No shops yet."));
+            return Center(
+              child: Text(
+                "No shops yet.",
+                style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
+              ),
+            );
           }
 
           final shops = snapshot.data!.docs;
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: shops.length,
             itemBuilder: (context, index) {
               final shop = shops[index];
-              return Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  title: Text(
-                    shop['name'],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                    ),
-                  ),
-                  subtitle: Text(
-                    shop['location'],
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => SupplierDashboard(
-                          shopId: shop.id,
-                          shopName: shop['name'],
-                          shopContact: shop['contact'],
-                        ),
+              final data = shop.data() as Map<String, dynamic>;
+              final shopName = data['name'] ?? 'Unnamed Shop';
+              final location = data['location'] ?? '';
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SupplierDashboard(
+                        shopId: shop.id,
+                        shopName: shopName,
+                        shopContact: data['contact'] ?? '',
                       ),
-                    );
-                  },
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[900],
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        offset: const Offset(0, 4),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    title: Text(
+                      shopName,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      location,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                  ),
                 ),
               );
             },

@@ -29,19 +29,20 @@ class OrderListPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.black,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 1,
         title: Text(
-          'Order List',
+          'Order List', // optional emoji or icon for character
           style: GoogleFonts.poppins(
+            fontSize: 22,
             fontWeight: FontWeight.w600,
-            fontSize: 20,
             color: Colors.black,
+            letterSpacing: 0.3,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
+            icon: const Icon(Icons.add, color: Colors.black, size: 30),
             onPressed: () {
               Navigator.push(
                 context,
