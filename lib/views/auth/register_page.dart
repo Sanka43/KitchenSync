@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import '../../services/auth_service.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,9 +19,13 @@ class _RegisterPageState extends State<RegisterPage> {
   String selectedRole = 'hotel';
 
   bool isLoading = false;
+  bool _hovering = false;
+  double _beforeOffset = -100;
 
   @override
   Widget build(BuildContext context) {
+    const green = Color(0xFF1BFD9C);
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -49,12 +54,19 @@ class _RegisterPageState extends State<RegisterPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text(
+                        Text(
                           'Register',
-                          style: TextStyle(
-                            fontSize: 28,
+                          style: GoogleFonts.italianno(
+                            fontSize: 52,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
+                            shadows: const [
+                              Shadow(
+                                color: Colors.black87,
+                                offset: Offset(3, 3),
+                                blurRadius: 6,
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -70,50 +82,10 @@ class _RegisterPageState extends State<RegisterPage> {
                         const SizedBox(height: 20),
                         _buildRoleDropdown(),
                         const SizedBox(height: 25),
-                        ElevatedButton(
-                          onPressed: () async {
-                            setState(() => isLoading = true);
-                            final response = await authService.registerUser(
-                              username: usernameController.text.trim(),
-                              email: emailController.text.trim(),
-                              password: passwordController.text.trim(),
-                              role: selectedRole,
-                            );
-                            setState(() => isLoading = false);
-
-                            if (response == null) {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginPage(),
-                                ),
-                              );
-                            } else {
-                              ScaffoldMessenger.of(
-                                context,
-                              ).showSnackBar(SnackBar(content: Text(response)));
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.tealAccent[700],
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 40,
-                              vertical: 15,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            shadowColor: Colors.tealAccent,
-                            elevation: 10,
-                          ),
-                          child: isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : const Text(
-                                  'Register',
-                                  style: TextStyle(fontSize: 16),
-                                ),
+                        _buildNeonButton(
+                          text: 'Register',
+                          isLoading: isLoading,
+                          onPressed: _handleRegister,
                         ),
                         const SizedBox(height: 15),
                         TextButton(
@@ -127,7 +99,12 @@ class _RegisterPageState extends State<RegisterPage> {
                           },
                           child: const Text(
                             "Already have an account? Login",
-                            style: TextStyle(color: Colors.white70),
+                            style: TextStyle(
+                              color: Color.fromARGB(200, 255, 255, 255),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ],
@@ -138,6 +115,126 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _handleRegister() async {
+    setState(() => isLoading = true);
+
+    final response = await authService.registerUser(
+      username: usernameController.text.trim(),
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+      role: selectedRole,
+    );
+
+    setState(() => isLoading = false);
+
+    if (response == null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(response)));
+    }
+  }
+
+  Widget _buildNeonButton({
+    required String text,
+    required VoidCallback onPressed,
+    bool isLoading = false,
+  }) {
+    const green = Color(0xFF1BFD9C);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() {
+        _hovering = true;
+        _beforeOffset = 300;
+      }),
+      onExit: (_) => setState(() {
+        _hovering = false;
+        _beforeOffset = -100;
+      }),
+      child: GestureDetector(
+        onTap: isLoading ? null : onPressed,
+        child: Stack(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(color: green, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: green.withOpacity(_hovering ? 0.2 : 0.1),
+                    blurRadius: 9,
+                    spreadRadius: 3,
+                  ),
+                  BoxShadow(
+                    color: green.withOpacity(_hovering ? 0.6 : 0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 0),
+                  ),
+                ],
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromRGBO(27, 253, 156, 0.1),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Color.fromRGBO(27, 253, 156, 0.1),
+                  ],
+                  stops: [0.01, 0.4, 0.6, 1.0],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      text,
+                      style: TextStyle(
+                        color: _hovering
+                            ? const Color(0xFF82FFC9)
+                            : const Color.fromARGB(255, 27, 253, 156),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+            ),
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 400),
+              top: 0,
+              bottom: 0,
+              left: _beforeOffset,
+              child: Container(
+                width: 100,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      green.withOpacity(0.1),
+                      green.withOpacity(0.1),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.4, 0.6, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -153,7 +250,7 @@ class _RegisterPageState extends State<RegisterPage> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white60),
+        hintStyle: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
         border: OutlineInputBorder(
@@ -172,13 +269,13 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: DropdownButtonFormField<String>(
-        dropdownColor: Colors.grey[900],
-        style: const TextStyle(color: Colors.white),
+        dropdownColor: const Color.fromARGB(200, 0, 0, 0),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
         value: selectedRole,
         decoration: const InputDecoration(
           border: InputBorder.none,
           labelText: 'Select Role',
-          labelStyle: TextStyle(color: Colors.white60),
+          labelStyle: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
         ),
         onChanged: (value) {
           setState(() {

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'order_detail_page.dart';
 import 'add_order_page.dart';
 
@@ -14,14 +16,29 @@ class OrderListPage extends StatelessWidget {
     return shopDoc.exists ? shopDoc['name'] ?? 'Unknown Shop' : 'Unknown Shop';
   }
 
+  String _formatDate(Timestamp? timestamp) {
+    if (timestamp == null) return 'No date';
+    final date = timestamp.toDate();
+    return DateFormat('dd MMM yyyy • hh:mm a').format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
+    const lightBackground = Color(0xFFF1F3F6);
+
     return Scaffold(
       appBar: AppBar(
         foregroundColor: Colors.black,
         backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Order List'),
+        elevation: 1,
+        title: Text(
+          'Order List',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+            color: Colors.black,
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.black),
@@ -34,7 +51,7 @@ class OrderListPage extends StatelessWidget {
           ),
         ],
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: lightBackground,
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('orders')
@@ -45,7 +62,12 @@ class OrderListPage extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No orders found'));
+            return Center(
+              child: Text(
+                'No orders found',
+                style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey),
+              ),
+            );
           }
 
           final orders = snapshot.data!.docs;
@@ -56,48 +78,65 @@ class OrderListPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final orderDoc = orders[index];
               final data = orderDoc.data() as Map<String, dynamic>;
-              final Timestamp? createdAtTimestamp = data['createdAt'];
-              final createdAt = createdAtTimestamp?.toDate();
+              final createdAt = data['createdAt'] as Timestamp?;
               final shopId = data['shopId'] ?? '';
 
               return FutureBuilder<String>(
                 future: _getShopName(shopId),
                 builder: (context, shopSnapshot) {
-                  final shopName = shopSnapshot.data ?? 'Loading...';
+                  final shopName =
+                      shopSnapshot.connectionState == ConnectionState.waiting
+                      ? 'Loading...'
+                      : shopSnapshot.data ?? 'Unknown Shop';
 
-                  return Card(
-                    color: Colors.grey[900],
-                    elevation: 4,
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        'Order at $shopName',
-                        style: const TextStyle(
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrderDetailPage(orderDoc: orderDoc),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[900],
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            offset: const Offset(0, 4),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        title: Text(
+                          'Order at $shopName',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _formatDate(createdAt),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                          size: 18,
                         ),
                       ),
-                      subtitle: Text(
-                        createdAt != null
-                            ? '${createdAt.day}/${createdAt.month}/${createdAt.year} ${createdAt.hour}:${createdAt.minute.toString().padLeft(2, '0')}'
-                            : 'No date',
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white,
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => OrderDetailPage(orderDoc: orderDoc),
-                          ),
-                        );
-                      },
                     ),
                   );
                 },
