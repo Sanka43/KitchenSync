@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'items_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ItemsListPage extends StatefulWidget {
   const ItemsListPage({super.key});
@@ -15,19 +16,23 @@ class _ItemsListPageState extends State<ItemsListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: const Color(0xFFF1F3F6),
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text('Items', style: TextStyle(color: Colors.black)),
-        backgroundColor: const Color.fromARGB(
-          255,
-          255,
-          255,
-          255,
-        ).withOpacity(0.8),
+        title: Text(
+          'Items',
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+            letterSpacing: 0.3,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
+            icon: const Icon(Icons.add, color: Colors.black, size: 30),
             onPressed: () {
               Navigator.push(
                 context,
@@ -43,18 +48,27 @@ class _ItemsListPageState extends State<ItemsListPage> {
             child: TextField(
               onChanged: (value) =>
                   setState(() => _searchQuery = value.toLowerCase()),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.black, fontSize: 16),
               decoration: InputDecoration(
                 hintText: 'Search items...',
-                hintStyle: const TextStyle(
-                  color: Color.fromARGB(255, 255, 255, 255),
+                hintStyle: const TextStyle(color: Colors.black54, fontSize: 16),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Colors.black54,
+                  size: 24,
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
                 ),
                 filled: true,
-                fillColor: const Color.fromARGB(161, 0, 0, 0),
-                prefixIcon: const Icon(Icons.search, color: Colors.white),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+                fillColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                enabledBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.black26, width: 1.5),
+                ),
+                focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.black87, width: 2),
                 ),
               ),
             ),
@@ -64,7 +78,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('items')
-            .orderBy('itemName') // optional sorting
+            .orderBy('itemName')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -80,15 +94,6 @@ class _ItemsListPageState extends State<ItemsListPage> {
             );
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                'No items found',
-                style: TextStyle(color: Colors.white70),
-              ),
-            );
-          }
-
           final docs = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final name = (data['itemName'] ?? '').toString().toLowerCase();
@@ -99,7 +104,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
             return const Center(
               child: Text(
                 'No results match your search.',
-                style: TextStyle(color: Color.fromARGB(189, 50, 50, 50)),
+                style: TextStyle(color: Colors.black54),
               ),
             );
           }
@@ -112,68 +117,78 @@ class _ItemsListPageState extends State<ItemsListPage> {
               final data = doc.data() as Map<String, dynamic>;
               final name = data['itemName'] ?? 'Unnamed';
               final stock = data['stock'] ?? 0;
+              final maxStock = data['maxStock'] ?? 100;
 
-              return Card(
-                color: const Color.fromARGB(255, 0, 0, 0),
-                elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              final double percentage = (stock / maxStock)
+                  .clamp(0.0, 1.0)
+                  .toDouble();
+
+              Color progressColor;
+              if (percentage <= 0.25) {
+                progressColor = Colors.red;
+              } else if (percentage <= 0.5) {
+                progressColor = Colors.orange;
+              } else if (percentage <= 0.75) {
+                progressColor = Colors.yellow[700]!;
+              } else {
+                progressColor = Colors.green;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   title: Text(
                     name,
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: const Color.fromARGB(255, 0, 0, 0),
+                    ),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 6),
                       Text(
-                        'Stock: $stock',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
+                        'Stock: $stock / $maxStock',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: const Color.fromARGB(179, 0, 0, 0),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Builder(
-                        builder: (context) {
-                          final int maxStock =
-                              data['maxStock'] ??
-                              100; // Default to 100 if not present
-                          final double percentage = (stock / maxStock).clamp(
-                            0.0,
-                            1.0,
-                          );
-
-                          Color progressColor;
-                          if (percentage <= 0.25) {
-                            progressColor = Colors.red;
-                          } else if (percentage <= 0.5) {
-                            progressColor = Colors.orange;
-                          } else if (percentage <= 0.75) {
-                            progressColor = Colors.yellow;
-                          } else {
-                            progressColor = Colors.green;
-                          }
-
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: LinearProgressIndicator(
-                              value: percentage,
-                              minHeight: 8,
-                              backgroundColor: Colors.white24,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                progressColor,
-                              ),
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: percentage,
+                          minHeight: 8,
+                          backgroundColor: const Color.fromARGB(60, 0, 0, 0),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            progressColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-
-                  trailing: const Icon(Icons.edit, color: Colors.white70),
+                  trailing: const Icon(
+                    Icons.edit,
+                    color: Color.fromARGB(179, 0, 0, 0),
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -205,7 +220,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
+        backgroundColor: const Color.fromARGB(255, 0, 0, 0),
         title: const Text('Delete Item', style: TextStyle(color: Colors.white)),
         content: Text(
           'Are you sure you want to delete "$itemName"?',

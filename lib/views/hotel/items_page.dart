@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ItemPage extends StatefulWidget {
   final String? docId;
@@ -9,11 +10,11 @@ class ItemPage extends StatefulWidget {
   final int? initialMaxStock;
 
   const ItemPage({
+    super.key,
     this.docId,
     this.initialName,
     this.initialStock,
     this.initialMaxStock,
-    super.key,
   });
 
   @override
@@ -49,7 +50,6 @@ class _ItemPageState extends State<ItemPage> {
 
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSaving = true);
 
     final name = _nameController.text.trim();
@@ -58,9 +58,7 @@ class _ItemPageState extends State<ItemPage> {
 
     if (stock > maxStock) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Current stock cannot exceed max stock')),
-      );
+      _showMessage('Current stock cannot exceed max stock');
       return;
     }
 
@@ -71,12 +69,9 @@ class _ItemPageState extends State<ItemPage> {
         final existing = await itemsCollection
             .where('itemName', isEqualTo: name)
             .get();
-
         if (existing.docs.isNotEmpty) {
           setState(() => _isSaving = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Item name already exists')),
-          );
+          _showMessage('Item name already exists');
           return;
         }
       }
@@ -90,12 +85,19 @@ class _ItemPageState extends State<ItemPage> {
       }
 
       if (mounted) Navigator.of(context).pop();
-    } catch (e) {
+    } catch (_) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to save item')));
+      _showMessage('Failed to save item');
     }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _deleteItem() async {
@@ -103,17 +105,23 @@ class _ItemPageState extends State<ItemPage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Item?'),
-        content: const Text('Are you sure you want to delete this item?'),
+      builder: (_) => AlertDialog(
+        title: Text('Delete Item?', style: GoogleFonts.poppins()),
+        content: Text(
+          'Are you sure you want to delete this item?',
+          style: GoogleFonts.poppins(),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(
+              'Delete',
+              style: GoogleFonts.poppins(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -127,29 +135,24 @@ class _ItemPageState extends State<ItemPage> {
             .doc(widget.docId)
             .delete();
         if (mounted) Navigator.of(context).pop();
-      } catch (e) {
+      } catch (_) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Failed to delete item')));
+        _showMessage('Failed to delete item');
       }
     }
   }
 
-  InputDecoration _inputDecoration(String label) {
+  InputDecoration _inputStyle(String hint) {
     return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(
-        color: Color.fromARGB(175, 255, 255, 255),
-        fontSize: 20,
-      ),
+      hintText: hint,
+      hintStyle: GoogleFonts.poppins(color: Colors.grey.shade600),
       filled: true,
-      fillColor: Colors.black,
+      fillColor: const Color(0xFFF0F0F0),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
     );
   }
 
@@ -158,192 +161,159 @@ class _ItemPageState extends State<ItemPage> {
     final isEdit = widget.docId != null;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF1F3F6),
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit Item' : 'Add Item'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 1,
-        actions: [
-          if (isEdit)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _isSaving ? null : _deleteItem,
-              color: Colors.red,
-            ),
-        ],
+        title: Text(
+          isEdit ? 'Edit Item' : 'Add Item',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        actions: isEdit
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  color: const Color.fromARGB(255, 0, 0, 0),
+                  onPressed: _isSaving ? null : _deleteItem,
+                ),
+              ]
+            : null,
       ),
-      backgroundColor: Colors.white,
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
-              child: ListView(
-                children: [
-                  // Item Name
-                  Text(
-                    'Item Name',
-                    style: const TextStyle(fontSize: 22, color: Colors.black),
-                  ),
-                  TextFormField(
-                    controller: _nameController,
-                    enabled: !_isSaving,
-                    textInputAction: TextInputAction.next,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration('Item Name'),
-                    validator: (val) => val == null || val.trim().isEmpty
-                        ? 'Enter item name'
-                        : null,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Max Stock
-                  Text(
-                    'Max Stock',
-                    style: const TextStyle(fontSize: 22, color: Colors.black),
-                  ),
-                  TextFormField(
-                    controller: _maxStockController,
-                    enabled: !_isSaving,
-                    textInputAction: TextInputAction.next,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: _inputDecoration(''),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(3),
-                    ],
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Enter max stock';
-                      }
-                      final max = int.tryParse(val.trim());
-                      if (max == null || max <= 0) {
-                        return 'Enter a valid number > 0';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // Current Stock
-                  Text(
-                    'Current Stock',
-                    style: const TextStyle(fontSize: 22, color: Colors.black),
-                  ),
-                  TextFormField(
-                    controller: _stockController,
-                    enabled: !_isSaving,
-                    textInputAction: TextInputAction.done,
-                    style: const TextStyle(
-                      color: Color.fromARGB(255, 255, 255, 255),
-                    ),
-                    decoration: _inputDecoration(''),
-                    // keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(3),
-                    ],
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return 'Enter current stock';
-                      }
-                      final stock = int.tryParse(val.trim());
-                      if (stock == null || stock < 0) {
-                        return 'Enter a valid number';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  ElevatedButton(
-                    onPressed: _isSaving ? null : _saveItem,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+              child: Card(
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _formLabel('Item Name'),
+                      TextFormField(
+                        controller: _nameController,
+                        enabled: !_isSaving,
+                        autofocus: true,
+                        style: GoogleFonts.poppins(fontSize: 16),
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputStyle('Enter item name'),
+                        validator: (val) => val == null || val.trim().isEmpty
+                            ? 'Item name required'
+                            : null,
                       ),
-                    ),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        gradient: _isSaving
-                            ? LinearGradient(
-                                colors: [
-                                  Colors.grey.shade400,
-                                  Colors.grey.shade500,
-                                ],
-                              )
-                            : const LinearGradient(
-                                colors: [Color(0xFF00C853), Color(0xFF64DD17)],
-                              ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 6,
-                            offset: Offset(2, 4),
-                          ),
+                      const SizedBox(height: 20),
+
+                      _formLabel('Max Stock'),
+                      TextFormField(
+                        controller: _maxStockController,
+                        enabled: !_isSaving,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
                         ],
+                        style: GoogleFonts.poppins(),
+                        textInputAction: TextInputAction.next,
+                        decoration: _inputStyle('Enter max stock'),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Max stock required';
+                          }
+                          final max = int.tryParse(val.trim());
+                          if (max == null || max <= 0) {
+                            return 'Enter number > 0';
+                          }
+                          return null;
+                        },
                       ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 16,
-                          horizontal: 24,
-                        ),
-                        alignment: Alignment.center,
-                        child: _isSaving
-                            ? const SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    isEdit ? Icons.update : Icons.add,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    isEdit ? 'Update Item' : 'Add Item',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+                      const SizedBox(height: 20),
 
-          if (_isSaving)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.3),
-                child: const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                      _formLabel('Current Stock'),
+                      TextFormField(
+                        controller: _stockController,
+                        enabled: !_isSaving,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                        style: GoogleFonts.poppins(),
+                        textInputAction: TextInputAction.done,
+                        decoration: _inputStyle('Enter current stock'),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Current stock required';
+                          }
+                          final stock = int.tryParse(val.trim());
+                          if (stock == null || stock < 0) {
+                            return 'Enter valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 32),
+
+                      AnimatedOpacity(
+                        opacity: _isSaving ? 0.7 : 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: ElevatedButton.icon(
+                          icon: Icon(
+                            isEdit ? Icons.update : Icons.add,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            isEdit ? 'Update Item' : 'Add Item',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onPressed: _isSaving ? null : _saveItem,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00C853),
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
+          if (_isSaving)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.15),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _formLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
       ),
     );
   }

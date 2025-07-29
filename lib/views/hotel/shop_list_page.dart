@@ -235,7 +235,7 @@ class _ShopListPageState extends State<ShopListPage> {
         iconTheme: const IconThemeData(color: Colors.black),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
+            icon: const Icon(Icons.add, color: Colors.black, size: 30),
             onPressed: () {
               Navigator.push(
                 context,
