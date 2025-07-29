@@ -141,7 +141,9 @@ class _LoginPageState extends State<LoginPage> {
       if (role == 'hotel') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HotelDashboard()),
+          MaterialPageRoute(
+            builder: (_) => const HotelDashboard(hotelId: 'yourHotelIdHere'),
+          ),
         );
       } else if (role == 'supplier') {
         Navigator.pushReplacement(
