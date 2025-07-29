@@ -229,21 +229,21 @@ class _ShopListPageState extends State<ShopListPage> {
             fontSize: 22,
             fontWeight: FontWeight.w600,
             color: Colors.black,
-            letterSpacing: 0.3,
+            // letterSpacing: 0.3,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black, size: 30),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddShopPage()),
-              );
-            },
-          ),
-        ],
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.add, color: Colors.black, size: 30),
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(builder: (_) => const AddShopPage()),
+        //       );
+        //     },
+        //   ),
+        // ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance

@@ -13,6 +13,50 @@ class ItemsListPage extends StatefulWidget {
 class _ItemsListPageState extends State<ItemsListPage> {
   String _searchQuery = '';
 
+  void updateItemStockFromOrder(
+    List<Map<String, dynamic>> deliveredItems,
+  ) async {
+    final firestore = FirebaseFirestore.instance;
+    bool allSuccess = true;
+
+    for (final item in deliveredItems) {
+      final itemId = item['itemId'];
+      final deliveredQty = item['quantity'] ?? 0;
+
+      if (itemId != null && deliveredQty is int) {
+        try {
+          final itemDoc = await firestore.collection('items').doc(itemId).get();
+          if (itemDoc.exists) {
+            final data = itemDoc.data()!;
+            final currentStock = data['stock'] ?? 0;
+            final maxStock = data['maxStock'] ?? 0;
+
+            int newStock = currentStock + deliveredQty;
+            if (newStock > maxStock) newStock = maxStock;
+
+            await firestore.collection('items').doc(itemId).update({
+              'stock': newStock,
+            });
+          }
+        } catch (e) {
+          allSuccess = false;
+          debugPrint('Failed to update $itemId: $e');
+        }
+      }
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          allSuccess
+              ? 'Stocks updated successfully!'
+              : 'Some items failed to update.',
+          style: GoogleFonts.poppins(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,6 +241,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
                           docId: doc.id,
                           initialName: name,
                           initialStock: stock,
+                          initialMaxStock: maxStock,
                         ),
                       ),
                     );

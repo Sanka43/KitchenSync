@@ -1,7 +1,10 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../../services/realtime_service.dart';
 import '../../services/usage_service.dart' as services_usage;
 import '../auth/login_page.dart';
@@ -97,22 +100,13 @@ class _HotelDashboardState extends State<HotelDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF1F3F6),
       drawer: _buildDrawer(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Hotel Dashboard',
-          style: TextStyle(color: Colors.black),
-        ),
+        title: Text('', style: GoogleFonts.poppins(color: Colors.black)),
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
-            onPressed: _loadData,
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -149,64 +143,82 @@ class _HotelDashboardState extends State<HotelDashboard> {
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color.fromARGB(255, 24, 24, 24),
-      child: ListView(
-        padding: EdgeInsets.zero,
+      child: Stack(
         children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
-            accountName: Text(
-              _hotelName,
-              style: const TextStyle(color: Colors.white),
-            ),
-            accountEmail: const Text(
-              "Main Kitchen",
-              style: TextStyle(color: Colors.white70),
-            ),
-            currentAccountPicture: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfilePage()),
+          Container(color: Colors.white.withOpacity(1)),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+            child: Container(color: const Color.fromARGB(255, 245, 245, 245)),
+          ),
+          ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                decoration: BoxDecoration(color: Colors.white.withOpacity(1)),
+                accountName: Text(
+                  _hotelName,
+                  style: GoogleFonts.poppins(
+                    color: const Color.fromARGB(255, 21, 22, 64),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                accountEmail: Text(
+                  "Main Kitchen",
+                  style: GoogleFonts.poppins(
+                    color: const Color.fromARGB(230, 21, 22, 64),
+                    fontSize: 14,
+                  ),
+                ),
+                currentAccountPicture: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                  ),
+                  child: const CircleAvatar(
+                    backgroundColor: Colors.black12,
+                    child: Icon(
+                      Icons.person,
+                      color: const Color.fromARGB(255, 21, 22, 64),
+                      size: 40,
+                    ),
+                  ),
+                ),
               ),
-              child: const CircleAvatar(
-                backgroundColor: Colors.grey,
-                child: Icon(Icons.person, size: 40, color: Colors.white),
-              ),
-            ),
-          ),
-          _buildDrawerItem(
-            Icons.list_alt,
-            'Order List',
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => OrderListPage()),
-            ),
-          ),
-          _buildDrawerItem(
-            Icons.inventory,
-            'Items',
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ItemsListPage()),
-            ),
-          ),
-          _buildDrawerItem(
-            Icons.shopping_cart,
-            'Shops',
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ShopListPage(hotelId: currentUserId),
-              ),
-            ),
-          ),
-          _buildDrawerItem(
-            Icons.logout,
-            'Logout',
-            () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            ),
+              _buildDrawerItem(Icons.list_alt, 'Order List', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => OrderListPage()),
+                );
+              }),
+              _buildDrawerItem(Icons.inventory, 'Items', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ItemsListPage()),
+                );
+              }),
+              _buildDrawerItem(Icons.shopping_cart, 'Shops', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ShopListPage(hotelId: currentUserId),
+                  ),
+                );
+              }),
+              const Divider(thickness: 0.5),
+              _buildDrawerItem(Icons.edit, 'Edit Profile', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                );
+              }),
+              _buildDrawerItem(Icons.logout, 'Logout', () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              }),
+            ],
           ),
         ],
       ),
@@ -215,8 +227,15 @@ class _HotelDashboardState extends State<HotelDashboard> {
 
   Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
+      leading: Icon(icon, color: const Color.fromARGB(255, 21, 22, 64)),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          color: const Color.fromARGB(255, 21, 22, 64),
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
       onTap: onTap,
     );
   }
@@ -230,9 +249,12 @@ class _HotelDashboardState extends State<HotelDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Summary",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             _buildSummaryRow("Total Items", _items.length.toString()),
@@ -250,8 +272,8 @@ class _HotelDashboardState extends State<HotelDashboard> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(label, style: GoogleFonts.poppins(fontSize: 16)),
+        Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -275,9 +297,12 @@ class _HotelDashboardState extends State<HotelDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Low Stock Items",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -286,8 +311,14 @@ class _HotelDashboardState extends State<HotelDashboard> {
                 itemBuilder: (context, index) {
                   final item = lowStockItems[index];
                   return ListTile(
-                    title: Text(item['itemName'] ?? 'Unnamed'),
-                    trailing: Text(item['stock'].toString()),
+                    title: Text(
+                      item['itemName'] ?? 'Unnamed',
+                      style: GoogleFonts.poppins(),
+                    ),
+                    trailing: Text(
+                      item['stock'].toString(),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                    ),
                   );
                 },
               ),
@@ -321,9 +352,12 @@ class _HotelDashboardState extends State<HotelDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Stock Chart",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -341,6 +375,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
                             index < chartItems.length
                                 ? chartItems[index]['itemName'] ?? ''
                                 : '',
+                            style: GoogleFonts.poppins(fontSize: 10),
                           );
                         },
                       ),
