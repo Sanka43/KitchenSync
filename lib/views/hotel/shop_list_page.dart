@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'add_shop_page.dart';
 
 class ShopListPage extends StatefulWidget {
   final String hotelId;

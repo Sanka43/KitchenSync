@@ -263,7 +263,7 @@
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      '$formattedDate',
+                      formattedDate,
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -325,7 +325,7 @@
                     ),
                   ),
                 );
-              }).toList(),
+              }),
 
               const SizedBox(height: 20),
 
