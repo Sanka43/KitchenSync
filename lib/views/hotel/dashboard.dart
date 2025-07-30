@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:pie_chart/pie_chart.dart';
 
 import '../auth/login_page.dart';
 import 'edit_profile_page.dart';
@@ -26,6 +27,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
   int pendingOrderCount = 0;
   bool isLoading = true;
   List<Map<String, dynamic>> lowStockItems = [];
+  List<Map<String, dynamic>> allStockItems = [];
 
   @override
   void initState() {
@@ -59,23 +61,22 @@ class _HotelDashboardState extends State<HotelDashboard> {
           .where('location', isEqualTo: location)
           .get();
 
+      // Store all stock items
+      allStockItems = itemsSnap.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'name': data['itemName'] ?? 'Unnamed',
+          'stock': data['stock'] ?? 0,
+          'maxStock': data['maxStock'] ?? 0,
+        };
+      }).toList();
+
       // Calculate low stock items
-      lowStockItems = itemsSnap.docs
-          .where((doc) {
-            final data = doc.data();
-            final int stock = data['stock'] ?? 0;
-            final int maxStock = data['maxStock'] ?? 1;
-            return maxStock > 0 && stock < maxStock * 0.25;
-          })
-          .map((doc) {
-            final data = doc.data();
-            return {
-              'name': data['itemName'] ?? 'Unnamed',
-              'stock': data['stock'] ?? 0,
-              'maxStock': data['maxStock'] ?? 0,
-            };
-          })
-          .toList();
+      lowStockItems = allStockItems.where((item) {
+        final int stock = item['stock'] ?? 0;
+        final int maxStock = item['maxStock'] ?? 1;
+        return maxStock > 0 && stock < maxStock * 0.25;
+      }).toList();
 
       setState(() {
         itemCount = itemsSnap.size;
@@ -131,24 +132,83 @@ class _HotelDashboardState extends State<HotelDashboard> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back!',
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back!',
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSummaryCards(),
-                  const SizedBox(height: 16),
-                  _buildLowStockWidget(),
-                ],
+                    _buildStockLevelWidget(),
+                    const SizedBox(height: 16),
+                    _buildSummaryCards(),
+                    const SizedBox(height: 16),
+                    _buildLowStockWidget(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
+    );
+  }
+
+  Widget _buildStockLevelWidget() {
+    Map<String, double> dataMap = {};
+
+    for (var item in allStockItems) {
+      final String name = item['name'] ?? 'Unnamed';
+      final int stock = item['stock'] ?? 0;
+      final int maxStock = item['maxStock'] ?? 1;
+      if (maxStock <= 0) continue;
+      final double percentage = (stock / maxStock) * 100;
+      dataMap[name] = percentage;
+    }
+
+    if (dataMap.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'No item stock data available.',
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[700]),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: PieChart(
+            dataMap: dataMap,
+            animationDuration: const Duration(milliseconds: 800),
+            chartType: ChartType.ring,
+            chartValuesOptions: const ChartValuesOptions(
+              showChartValuesInPercentage: true,
+              showChartValues: true,
+              chartValueBackgroundColor: Colors.transparent,
+              chartValueStyle: TextStyle(
+                color: Color.fromARGB(201, 0, 0, 0),
+                fontSize: 18,
+              ),
+            ),
+            legendOptions: const LegendOptions(
+              showLegends: true,
+              legendTextStyle: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
