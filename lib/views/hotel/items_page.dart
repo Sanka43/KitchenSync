@@ -8,6 +8,7 @@ class ItemPage extends StatefulWidget {
   final String? initialName;
   final int? initialStock;
   final int? initialMaxStock;
+  final String hotelId; // <- Required hotel ID
 
   const ItemPage({
     super.key,
@@ -15,6 +16,7 @@ class ItemPage extends StatefulWidget {
     this.initialName,
     this.initialStock,
     this.initialMaxStock,
+    required this.hotelId, // <- Pass this when opening ItemPage
   });
 
   @override
@@ -68,15 +70,21 @@ class _ItemPageState extends State<ItemPage> {
       if (widget.docId == null) {
         final existing = await itemsCollection
             .where('itemName', isEqualTo: name)
+            .where('hotelId', isEqualTo: widget.hotelId)
             .get();
         if (existing.docs.isNotEmpty) {
           setState(() => _isSaving = false);
-          _showMessage('Item name already exists');
+          _showMessage('Item name already exists for this hotel');
           return;
         }
       }
 
-      final itemData = {'itemName': name, 'stock': stock, 'maxStock': maxStock};
+      final itemData = {
+        'itemName': name,
+        'stock': stock,
+        'maxStock': maxStock,
+        'hotelId': widget.hotelId,
+      };
 
       if (widget.docId == null) {
         await itemsCollection.add(itemData);
@@ -145,9 +153,11 @@ class _ItemPageState extends State<ItemPage> {
   InputDecoration _inputStyle(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: GoogleFonts.poppins(color: Colors.grey.shade600),
+      hintStyle: GoogleFonts.poppins(
+        color: const Color.fromARGB(255, 156, 156, 156),
+      ),
       filled: true,
-      fillColor: const Color(0xFFF0F0F0),
+      fillColor: const Color.fromARGB(43, 123, 123, 123),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide.none,
@@ -174,7 +184,7 @@ class _ItemPageState extends State<ItemPage> {
             ? [
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  color: const Color.fromARGB(255, 0, 0, 0),
+                  color: Colors.black,
                   onPressed: _isSaving ? null : _deleteItem,
                 ),
               ]
@@ -202,7 +212,10 @@ class _ItemPageState extends State<ItemPage> {
                         controller: _nameController,
                         enabled: !_isSaving,
                         autofocus: true,
-                        style: GoogleFonts.poppins(fontSize: 16),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.black,
+                        ),
                         textInputAction: TextInputAction.next,
                         decoration: _inputStyle('Enter item name'),
                         validator: (val) => val == null || val.trim().isEmpty
@@ -220,7 +233,10 @@ class _ItemPageState extends State<ItemPage> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(3),
                         ],
-                        style: GoogleFonts.poppins(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.black,
+                        ),
                         textInputAction: TextInputAction.next,
                         decoration: _inputStyle('Enter max stock'),
                         validator: (val) {
@@ -245,7 +261,10 @@ class _ItemPageState extends State<ItemPage> {
                           FilteringTextInputFormatter.digitsOnly,
                           LengthLimitingTextInputFormatter(3),
                         ],
-                        style: GoogleFonts.poppins(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.black,
+                        ),
                         textInputAction: TextInputAction.done,
                         decoration: _inputStyle('Enter current stock'),
                         validator: (val) {

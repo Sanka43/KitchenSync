@@ -4,7 +4,9 @@ import 'items_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ItemsListPage extends StatefulWidget {
-  const ItemsListPage({super.key});
+  final String hotelId;
+
+  const ItemsListPage({super.key, required this.hotelId});
 
   @override
   State<ItemsListPage> createState() => _ItemsListPageState();
@@ -80,7 +82,9 @@ class _ItemsListPageState extends State<ItemsListPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ItemPage()),
+                MaterialPageRoute(
+                  builder: (_) => ItemPage(hotelId: widget.hotelId),
+                ),
               );
             },
           ),
@@ -122,20 +126,12 @@ class _ItemsListPageState extends State<ItemsListPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('items')
+            .where('hotelId', isEqualTo: widget.hotelId)
             .orderBy('itemName')
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return const Center(
-              child: Text(
-                'Error loading items',
-                style: TextStyle(color: Colors.red),
-              ),
-            );
           }
 
           final docs = snapshot.data!.docs.where((doc) {
@@ -181,7 +177,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 255, 255, 255),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -201,7 +197,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: const Color.fromARGB(255, 0, 0, 0),
+                      color: Colors.black,
                     ),
                   ),
                   subtitle: Column(
@@ -212,7 +208,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
                         'Stock: $stock / $maxStock',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: const Color.fromARGB(179, 0, 0, 0),
+                          color: Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -229,15 +225,13 @@ class _ItemsListPageState extends State<ItemsListPage> {
                       ),
                     ],
                   ),
-                  trailing: const Icon(
-                    Icons.edit,
-                    color: Color.fromARGB(179, 0, 0, 0),
-                  ),
+                  trailing: const Icon(Icons.edit, color: Colors.black54),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ItemPage(
+                          hotelId: widget.hotelId,
                           docId: doc.id,
                           initialName: name,
                           initialStock: stock,
@@ -265,7 +259,7 @@ class _ItemsListPageState extends State<ItemsListPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+        backgroundColor: Colors.black,
         title: const Text('Delete Item', style: TextStyle(color: Colors.white)),
         content: Text(
           'Are you sure you want to delete "$itemName"?',
