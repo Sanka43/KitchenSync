@@ -43,18 +43,18 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           "Order List",
           style: GoogleFonts.poppins(
+            fontSize: 22,
             fontWeight: FontWeight.w600,
-            fontSize: 20,
-            color: const Color(0xFF151640),
+            color: Colors.black,
           ),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF151640)),
-        centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -63,9 +63,8 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData)
             return const Center(child: CircularProgressIndicator());
-          }
 
           final orders = snapshot.data!.docs;
           if (orders.isEmpty) {
@@ -88,7 +87,9 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
               final data = order.data() as Map<String, dynamic>;
               final timestamp = data['createdAt'] as Timestamp?;
               final createdAt = timestamp != null
-                  ? DateFormat('yyyy-MM-dd – kk:mm').format(timestamp.toDate())
+                  ? DateFormat(
+                      'yyyy-MM-dd • hh:mm a',
+                    ).format(timestamp.toDate())
                   : 'Unknown';
 
               final status = data['status'] ?? 'pending';
@@ -103,84 +104,81 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 255, 255),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black12.withOpacity(0.99),
+                          color: Colors.black12.withOpacity(0.08),
                           blurRadius: 8,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Hotel: $hotelName",
+                          hotelName,
                           style: GoogleFonts.poppins(
-                            fontSize: 22,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
-                            color: const Color.fromARGB(255, 12, 12, 29),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Order ID: ${order.id}",
-                          style: GoogleFonts.poppins(
-                            color: Colors.grey[900],
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          "Items:",
-                          style: GoogleFonts.poppins(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF151640),
+                            color: Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        ...items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(left: 12, top: 2),
-                            child: Text(
-                              "* ${item['itemId']} x ${item['quantity']}",
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                color: const Color.fromARGB(255, 27, 27, 27),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
                         Text(
-                          "Status: ${status.toUpperCase()}...",
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: const Color.fromARGB(200, 0, 0, 0),
-                          ),
-                        ),
-                        Text(
-                          "Created: $createdAt",
+                          "Order ID: ${order.id}",
                           style: GoogleFonts.poppins(
                             fontSize: 13,
-                            color: Colors.grey[900],
+                            color: Colors.grey[700],
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const Divider(height: 20, thickness: 0.5),
+                        Text(
+                          "Items Ordered:",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        ...items.map((item) {
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8, bottom: 3),
+                            child: Text(
+                              "• ${item['itemId']} x ${item['quantity']}",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 12),
                         Row(
+                          children: [
+                            _buildStatusChip(status),
+                            const Spacer(),
+                            Text(
+                              createdAt,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
                           children: [
                             if (status == 'pending') ...[
                               _buildActionButton("Accept", Colors.green, () {
                                 _updateStatus(order.id, 'accepted');
                               }),
-                              const SizedBox(width: 12),
                               _buildActionButton("Reject", Colors.red, () {
                                 _updateStatus(order.id, 'rejected');
                               }),
@@ -190,10 +188,10 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
                               }),
                             ] else ...[
                               Text(
-                                "Action Completed",
+                                "No further actions",
                                 style: GoogleFonts.poppins(
+                                  fontSize: 13,
                                   color: Colors.grey[600],
-                                  fontSize: 14,
                                 ),
                               ),
                             ],
@@ -213,16 +211,67 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
 
   Widget _buildActionButton(String label, Color color, VoidCallback onPressed) {
     return ElevatedButton(
+      onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
+        elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
       ),
-      onPressed: onPressed,
       child: Text(
         label,
-        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500),
+        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color chipColor;
+    IconData icon;
+    switch (status) {
+      case 'pending':
+        chipColor = Colors.orange;
+        icon = Icons.access_time;
+        break;
+      case 'accepted':
+        chipColor = Colors.green;
+        icon = Icons.check_circle_outline;
+        break;
+      case 'delivered':
+        chipColor = Colors.blue;
+        icon = Icons.local_shipping_outlined;
+        break;
+      case 'rejected':
+        chipColor = Colors.red;
+        icon = Icons.cancel_outlined;
+        break;
+      default:
+        chipColor = Colors.grey;
+        icon = Icons.help_outline;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: chipColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: chipColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: chipColor),
+          const SizedBox(width: 6),
+          Text(
+            status.toUpperCase(),
+            style: GoogleFonts.poppins(
+              color: chipColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
