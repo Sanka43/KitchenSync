@@ -35,28 +35,31 @@ class _CreateShopPageState extends State<CreateShopPage> {
       backgroundColor: lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        elevation: 1,
+        elevation: 0,
         title: Text(
-          'Welcome, ${username.toUpperCase()}',
+          username.toUpperCase(),
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.w600,
             color: Colors.black,
-            letterSpacing: 0.3,
+            letterSpacing: 0.5,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateShopForm()),
-              );
-            },
-          ),
-        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateShopForm()),
+          );
+        },
+        backgroundColor: Colors.green[500],
+        child: const Icon(
+          Icons.add,
+          color: Color.fromARGB(255, 255, 255, 255),
+          size: 35,
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: firestoreService.getUserShops(),
@@ -99,44 +102,54 @@ class _CreateShopPageState extends State<CreateShopPage> {
                   );
                 },
                 child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
+                  margin: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.grey[900],
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withOpacity(0.5),
+                        offset: const Offset(0, 3),
                         blurRadius: 8,
                       ),
                     ],
                   ),
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green[500],
+                      child: Text(
+                        shopName.isNotEmpty ? shopName[0].toUpperCase() : 'S',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
                     title: Text(
                       shopName,
                       style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
                       ),
                     ),
                     subtitle: Text(
                       location,
                       style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 14,
+                        color: Colors.grey[900],
+                        fontSize: 16,
                       ),
                     ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
-                      color: Colors.white,
+                      color: Colors.grey,
                       size: 18,
                     ),
-                    contentPadding: EdgeInsets.zero,
                   ),
                 ),
               );

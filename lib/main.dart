@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF121212),
         textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
       ),
-      home: const SplashScreen(), // We'll define next
+      home: const SplashScreen(),
     );
   }
 }
