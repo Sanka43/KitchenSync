@@ -43,6 +43,7 @@ dependencies:
   image_picker: ^1.1.2
   firebase_storage: ^11.7.7
   pie_chart: ^5.1.0
+  flutter_local_notifications: ^19.4.0
 
 dev_dependencies:
   flutter_test:

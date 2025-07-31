@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final DocumentSnapshot orderDoc;
@@ -16,6 +17,8 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _scaleAnimation;
+
+  late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
   @override
   void initState() {
@@ -32,6 +35,17 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.repeat(reverse: true);
+
+    // Initialize local notifications
+    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   @override
@@ -40,9 +54,106 @@ class _OrderDetailPageState extends State<OrderDetailPage>
     super.dispose();
   }
 
+  Future<void> _showNotification(String title, String body) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'order_channel_id',
+          'Order Notifications',
+          channelDescription: 'Notifications about order updates',
+          importance: Importance.max,
+          priority: Priority.high,
+          ticker: 'ticker',
+        );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: 'order_payload',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final orderData = widget.orderDoc.data() as Map<String, dynamic>;
+    final DocumentReference orderDocRef = widget.orderDoc.reference;
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: orderDocRef.snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 1,
+              foregroundColor: Colors.black,
+              title: Text(
+                "Order Details",
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 1,
+              foregroundColor: Colors.black,
+              title: Text(
+                "Order Details",
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 1,
+              foregroundColor: Colors.black,
+              title: Text(
+                "Order Details",
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            body: const Center(child: Text('Order not found')),
+          );
+        }
+
+        final liveOrderDoc = snapshot.data!;
+        final liveOrderData = liveOrderDoc.data() as Map<String, dynamic>;
+
+        return _buildOrderDetailContent(liveOrderDoc, liveOrderData);
+      },
+    );
+  }
+
+  Widget _buildOrderDetailContent(
+    DocumentSnapshot orderDoc,
+    Map<String, dynamic> orderData,
+  ) {
     final Timestamp? timestamp = orderData['createdAt'];
     final DateTime? createdAt = timestamp?.toDate();
     final formattedDate = createdAt != null
@@ -56,17 +167,17 @@ class _OrderDetailPageState extends State<OrderDetailPage>
 
     const lightBackground = Color(0xFFF1F3F6);
 
+    Color stepColor(int index, int currentStep, bool isRejected) {
+      if (isRejected) return Colors.redAccent;
+      if (index < currentStep) return Colors.green;
+      if (index == currentStep) return Colors.orange;
+      return Colors.grey[300]!;
+    }
+
     Widget buildStatusProgressBar() {
       final steps = ['pending', 'accepted', 'delivered'];
       int currentStep = steps.indexOf(status);
       bool isRejected = status == 'rejected';
-
-      Color stepColor(int index) {
-        if (isRejected) return Colors.redAccent;
-        if (index < currentStep) return Colors.green;
-        if (index == currentStep) return Colors.orange;
-        return Colors.grey[300]!;
-      }
 
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -86,12 +197,16 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: stepColor(i),
+                            color: stepColor(i, currentStep, isRejected),
                             shape: BoxShape.circle,
                             boxShadow: isCurrent
                                 ? [
                                     BoxShadow(
-                                      color: stepColor(i).withOpacity(0.6),
+                                      color: stepColor(
+                                        i,
+                                        currentStep,
+                                        isRejected,
+                                      ).withOpacity(0.6),
                                       blurRadius: 12,
                                       spreadRadius: 2,
                                     ),
@@ -117,7 +232,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: stepColor(i),
+                      color: stepColor(i, currentStep, isRejected),
                     ),
                   ),
                 ],
@@ -202,10 +317,10 @@ class _OrderDetailPageState extends State<OrderDetailPage>
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.95),
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                     blurRadius: 8,
                   ),
                 ],
@@ -244,10 +359,10 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                       color: Colors.black12,
-                      offset: const Offset(0, 4),
+                      offset: Offset(0, 4),
                       blurRadius: 8,
                     ),
                   ],
@@ -299,7 +414,13 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                         'confirmedAt': Timestamp.now(),
                       });
 
-                      await widget.orderDoc.reference.delete();
+                      await orderDoc.reference.delete();
+
+                      // Show notification
+                      await _showNotification(
+                        "Order Confirmed",
+                        "Your order has been confirmed and removed from active orders.",
+                      );
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -307,7 +428,7 @@ class _OrderDetailPageState extends State<OrderDetailPage>
                         ),
                       );
 
-                      Navigator.pop(context);
+                      if (mounted) Navigator.pop(context);
                     } catch (e) {
                       ScaffoldMessenger.of(
                         context,
