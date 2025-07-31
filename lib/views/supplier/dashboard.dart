@@ -1,6 +1,9 @@
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import '../auth/login_page.dart';
 import 'create_shop_page.dart';
 import 'product_list.dart';
@@ -50,48 +53,128 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     }
   }
 
+  void _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
       drawer: _buildDrawer(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Color(0xFF151640)),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         title: Text(
           widget.shopName,
-          style: const TextStyle(color: Colors.black),
+          style: GoogleFonts.poppins(
+            color: const Color(0xFF151640),
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSummaryCard(
-              'Total Shops',
-              totalShops,
-              Icons.store,
-              Colors.blue,
+            Text(
+              'Welcome, ${widget.shopName}!',
+              style: GoogleFonts.poppins(
+                color: const Color(0xFF151640),
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildSummaryCard(
-              'Total Items',
-              totalItems,
-              Icons.inventory,
-              Colors.green,
-            ),
+            const SizedBox(height: 24),
+            _buildSummaryCards(),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'Recent Activity (Coming Soon)',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF151640),
+              ),
             ),
             const SizedBox(height: 16),
-            const Expanded(
+            Expanded(
               child: Center(
                 child: Text(
                   'Charts, logs, or task summaries can go here.',
-                  style: TextStyle(color: Colors.grey),
+                  style: GoogleFonts.poppins(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        _buildStatCard(Icons.store, 'Total Shops', totalShops, Colors.blue),
+        _buildStatCard(
+          Icons.inventory,
+          'Total Items',
+          totalItems,
+          Colors.green,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(IconData icon, String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.5),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 32, color: Colors.white),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$count',
+              style: GoogleFonts.poppins(
+                fontSize: 26,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -102,104 +185,101 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
-      backgroundColor: const Color.fromARGB(255, 24, 24, 24),
-      child: ListView(
-        padding: EdgeInsets.zero,
+      child: Stack(
         children: [
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Color(0xFF2C2C2C)),
-            accountName: Text(
-              widget.shopName,
-              style: const TextStyle(color: Colors.white),
-            ),
-            accountEmail: Text(
-              widget.shopContact,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.store, size: 40, color: Colors.white),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
-          _buildDrawerItem(Icons.home, 'Shops', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateShopPage()),
-            );
-          }),
-          _buildDrawerItem(Icons.shopping_cart, 'Orders', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SupplierOrderListPage(shopId: widget.shopId),
-              ),
-            );
-          }),
-          _buildDrawerItem(Icons.shopping_bag, 'Items', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ItemList(shopId: widget.shopId),
-              ),
-            );
-          }),
-          _buildDrawerItem(Icons.logout, 'Logout', () async {
-            await FirebaseAuth.instance.signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            );
-          }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    int count,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)],
-      ),
-      padding: const EdgeInsets.all(20),
-      width: double.infinity,
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: color,
-            radius: 28,
-            child: Icon(icon, size: 30, color: Colors.white),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(color: Colors.white.withOpacity(0.85)),
           ),
-          const SizedBox(width: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          ListView(
+            padding: EdgeInsets.zero,
             children: [
-              Text(title, style: const TextStyle(fontSize: 18)),
-              Text(
-                count.toString(),
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              UserAccountsDrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                ),
+                accountName: Text(
+                  widget.shopName,
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF151640),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                accountEmail: Text(
+                  widget.shopContact,
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFF151640).withOpacity(0.8),
+                    fontSize: 16,
+                  ),
+                ),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Colors.blue.shade100,
+                  child: const Icon(
+                    Icons.store,
+                    color: Colors.blueAccent,
+                    size: 44,
+                  ),
                 ),
               ),
+              _drawerItem(Icons.home, 'Create Shop', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CreateShopPage()),
+                );
+              }),
+              _drawerItem(Icons.shopping_cart, 'Orders', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        SupplierOrderListPage(shopId: widget.shopId),
+                  ),
+                );
+              }),
+              _drawerItem(Icons.inventory, 'Items', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ItemList(shopId: widget.shopId),
+                  ),
+                );
+              }),
+              const Divider(thickness: 1, indent: 20, endIndent: 20),
+              _drawerItem(Icons.logout, 'Logout', _logout),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFF151640)),
+      title: Text(
+        title,
+        style: GoogleFonts.poppins(
+          color: const Color(0xFF151640),
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      hoverColor: Colors.blue.shade50,
+      onTap: onTap,
     );
   }
 }
