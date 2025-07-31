@@ -112,44 +112,47 @@ class _HotelDashboardState extends State<HotelDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: const Color(0xFFF9FAFB), // softer white
       drawer: _buildDrawer(context),
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Color.fromARGB(255, 0, 0, 0)),
+        iconTheme: const IconThemeData(color: Color(0xFF151640)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: Text(
           '',
           style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            color: const Color(0xFF151640),
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome back!',
+                      'Welcome, $hotelName!',
                       style: GoogleFonts.poppins(
-                        color: Colors.black,
-                        fontSize: 24,
+                        color: const Color(0xFF151640),
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: 0.4,
                       ),
                     ),
+                    const SizedBox(height: 20),
                     _buildStockLevelWidget(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     _buildSummaryCards(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 32),
                     _buildLowStockWidget(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -171,44 +174,85 @@ class _HotelDashboardState extends State<HotelDashboard> {
 
     if (dataMap.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
         child: Text(
           'No item stock data available.',
-          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[700]),
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: PieChart(
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color.fromARGB(
+          0,
+          255,
+          255,
+          255,
+        ), // white with opacity, 0),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color.fromARGB(0, 0, 0, 0),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Text(
+          //   'Stock Levels',
+          //   style: GoogleFonts.poppins(
+          //     fontSize: 20,
+          //     fontWeight: FontWeight.w600,
+          //     color: const Color(0xFF151640),
+          //   ),
+          // ),
+          // const SizedBox(height: 12),
+          PieChart(
             dataMap: dataMap,
-            animationDuration: const Duration(milliseconds: 800),
+            animationDuration: const Duration(milliseconds: 900),
             chartType: ChartType.ring,
+            chartRadius: MediaQuery.of(context).size.width / 2.5,
+            ringStrokeWidth: 26,
             chartValuesOptions: const ChartValuesOptions(
               showChartValuesInPercentage: true,
               showChartValues: true,
+              decimalPlaces: 1,
               chartValueBackgroundColor: Colors.transparent,
               chartValueStyle: TextStyle(
-                color: Color.fromARGB(201, 0, 0, 0),
-                fontSize: 18,
+                color: Color(0xFF151640),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
             legendOptions: const LegendOptions(
               showLegends: true,
               legendTextStyle: TextStyle(
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Colors.black87,
+                color: Color(0xFF151640),
               ),
+              legendPosition: LegendPosition.right,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -216,84 +260,98 @@ class _HotelDashboardState extends State<HotelDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
         Text(
           'Low Stock Items',
           style: GoogleFonts.poppins(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: const Color.fromARGB(221, 0, 0, 0),
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF151640),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         if (lowStockItems.isEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
             decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 255, 255, 255),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: const [
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
+                  color: Colors.black12.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: Text(
               'No low stock items 🎉',
               style: GoogleFonts.poppins(
-                fontSize: 15,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w600,
               ),
             ),
           )
         else
-          ...lowStockItems.map((item) {
-            final int stock = item['stock'] ?? 0;
-            final int maxStock = item['maxStock'] ?? 1;
-            final String percent = (maxStock > 0)
-                ? ((stock / maxStock) * 100).toStringAsFixed(1)
-                : '0.0';
+          Column(
+            children: lowStockItems.map((item) {
+              final int stock = item['stock'] ?? 0;
+              final int maxStock = item['maxStock'] ?? 1;
+              final String percent = (maxStock > 0)
+                  ? ((stock / maxStock) * 100).toStringAsFixed(1)
+                  : '0.0';
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 255, 255, 255),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    item['name'] ?? 'Unnamed',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
-                  ),
-                  Text(
-                    ' $percent%  ($stock/$maxStock)',
-                    style: GoogleFonts.poppins(
-                      fontSize: 20,
-                      color: Colors.red[900],
-                      fontWeight: FontWeight.w500,
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      item['name'] ?? 'Unnamed',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF151640),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$percent%  ($stock/$maxStock)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.red[800],
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }
@@ -301,70 +359,105 @@ class _HotelDashboardState extends State<HotelDashboard> {
   Widget _buildSummaryCards() => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      _buildStatCard('Items', itemCount, Colors.blue),
-      _buildStatCard('Pending Orders', pendingOrderCount, Colors.red),
-      _buildStatCard('Shops', shopCount, Colors.orange),
+      _buildStatCard(Icons.inventory_2, 'Items', itemCount, Colors.blue),
+      _buildStatCard(
+        Icons.pending_actions,
+        'Pending Orders',
+        pendingOrderCount,
+        Colors.redAccent,
+      ),
+      _buildStatCard(Icons.store, 'Shops', shopCount, Colors.orangeAccent),
     ],
   );
 
-  Widget _buildStatCard(String label, int count, Color color) => Expanded(
-    child: Container(
-      margin: const EdgeInsets.symmetric(horizontal: 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$count',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+  Widget _buildStatCard(IconData icon, String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.5),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center, // Center vertically
+          crossAxisAlignment: CrossAxisAlignment.center, // Center horizontally
+          children: [
+            Icon(icon, size: 32, color: Colors.white),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center, // Center text alignment
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$count',
+              style: GoogleFonts.poppins(
+                fontSize: 26,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: Stack(
         children: [
-          Container(color: Colors.white.withOpacity(1)),
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
           BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-            child: Container(color: const Color.fromARGB(255, 245, 245, 245)),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+            child: Container(color: Colors.white.withOpacity(0.85)),
           ),
           ListView(
             padding: EdgeInsets.zero,
             children: [
               UserAccountsDrawerHeader(
-                decoration: BoxDecoration(color: Colors.white.withOpacity(1)),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                ),
                 accountName: Text(
                   hotelName.isEmpty ? 'Loading...' : hotelName,
                   style: GoogleFonts.poppins(
-                    color: const Color.fromARGB(255, 21, 22, 64),
+                    color: const Color(0xFF151640),
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 20,
                   ),
                 ),
                 accountEmail: Text(
                   location.isEmpty ? '' : location,
                   style: GoogleFonts.poppins(
-                    color: const Color.fromARGB(230, 21, 22, 64),
-                    fontSize: 14,
+                    color: const Color(0xFF151640).withOpacity(0.8),
+                    fontSize: 16,
                   ),
                 ),
                 currentAccountPicture: GestureDetector(
@@ -372,12 +465,12 @@ class _HotelDashboardState extends State<HotelDashboard> {
                     context,
                     MaterialPageRoute(builder: (_) => const EditProfilePage()),
                   ),
-                  child: const CircleAvatar(
-                    backgroundColor: Colors.black12,
-                    child: Icon(
+                  child: CircleAvatar(
+                    backgroundColor: Colors.blue.shade100,
+                    child: const Icon(
                       Icons.person,
-                      color: Color.fromARGB(255, 21, 22, 64),
-                      size: 40,
+                      color: Colors.blueAccent,
+                      size: 44,
                     ),
                   ),
                 ),
@@ -388,7 +481,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
                   MaterialPageRoute(builder: (_) => const OrderListPage()),
                 );
               }),
-              _drawerItem(Icons.inventory, 'Items', () {
+              _drawerItem(Icons.inventory_2, 'Items', () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -396,7 +489,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
                   ),
                 );
               }),
-              _drawerItem(Icons.shopping_cart, 'Shops', () {
+              _drawerItem(Icons.store, 'Shops', () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -404,7 +497,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
                   ),
                 );
               }),
-              const Divider(thickness: 0.5),
+              const Divider(thickness: 1, indent: 20, endIndent: 20),
               _drawerItem(Icons.edit, 'Edit Profile', () {
                 Navigator.push(
                   context,
@@ -421,15 +514,16 @@ class _HotelDashboardState extends State<HotelDashboard> {
 
   Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: const Color.fromARGB(255, 21, 22, 64)),
+      leading: Icon(icon, color: const Color(0xFF151640)),
       title: Text(
         title,
         style: GoogleFonts.poppins(
-          color: const Color.fromARGB(255, 21, 22, 64),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+          color: const Color(0xFF151640),
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
         ),
       ),
+      hoverColor: Colors.blue.shade50,
       onTap: onTap,
     );
   }
