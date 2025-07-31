@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ItemList extends StatefulWidget {
   final String shopId;
@@ -11,8 +11,8 @@ class ItemList extends StatefulWidget {
 }
 
 class _ItemListState extends State<ItemList> {
-  String? shopDocId; // Firestore document ID of the shop
-  String? customShopId; // Custom shopId field from Firestore
+  String? shopDocId;
+  String? customShopId;
   List<String> items = [];
   bool loading = true;
 
@@ -30,9 +30,7 @@ class _ItemListState extends State<ItemList> {
           .get();
 
       if (!shopDoc.exists) {
-        setState(() {
-          loading = false;
-        });
+        setState(() => loading = false);
         return;
       }
 
@@ -47,15 +45,12 @@ class _ItemListState extends State<ItemList> {
       });
     } catch (e) {
       print('Error loading shop items: $e');
-      setState(() {
-        loading = false;
-      });
+      setState(() => loading = false);
     }
   }
 
   Future<void> _updateItemsInFirestore() async {
     if (shopDocId == null) return;
-
     try {
       await FirebaseFirestore.instance
           .collection('shops')
@@ -67,50 +62,8 @@ class _ItemListState extends State<ItemList> {
   }
 
   void _deleteItem(int index) {
-    setState(() {
-      items.removeAt(index);
-    });
+    setState(() => items.removeAt(index));
     _updateItemsInFirestore();
-  }
-
-  void _editItem(int index) {
-    final currentItem = items[index];
-    final controller = TextEditingController(text: currentItem);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Item'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Item Name'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newItem = controller.text.trim();
-              if (newItem.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Item name cannot be empty')),
-                );
-                return;
-              }
-
-              setState(() {
-                items[index] = newItem;
-              });
-              _updateItemsInFirestore();
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _addItem() {
@@ -119,33 +72,38 @@ class _ItemListState extends State<ItemList> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add New Item'),
+        title: Text('Add New Item', style: GoogleFonts.poppins()),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'Item Name'),
+          decoration: InputDecoration(
+            labelText: 'Item Name',
+            labelStyle: GoogleFonts.poppins(),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: GoogleFonts.poppins()),
           ),
           ElevatedButton(
             onPressed: () {
               final newItem = controller.text.trim();
               if (newItem.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Item name cannot be empty')),
+                  SnackBar(
+                    content: Text(
+                      'Item name cannot be empty',
+                      style: GoogleFonts.poppins(),
+                    ),
+                  ),
                 );
                 return;
               }
-
-              setState(() {
-                items.add(newItem);
-              });
+              setState(() => items.add(newItem));
               _updateItemsInFirestore();
               Navigator.pop(context);
             },
-            child: const Text('Add'),
+            child: Text('Add', style: GoogleFonts.poppins()),
           ),
         ],
       ),
@@ -159,68 +117,87 @@ class _ItemListState extends State<ItemList> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Text(
-          customShopId != null
-              ? 'Items List (Shop ID: $customShopId)'
-              : 'Items List',
-          style: const TextStyle(color: Colors.black),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _addItem,
-            icon: const Icon(Icons.add, color: Colors.black),
-            tooltip: 'Add Item',
+          'Items List',
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
-        ],
+        ),
+        // centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: items.isEmpty
-          ? const Center(child: Text('No items found.'))
+          ? Center(
+              child: Text(
+                'No items found.',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            )
           : ListView.builder(
+              padding: const EdgeInsets.all(16),
               itemCount: items.length,
               itemBuilder: (context, index) {
                 final item = items[index];
                 return Card(
-                  color: const Color.fromARGB(200, 0, 0, 0),
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 15,
-                    vertical: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: ListTile(
-                    title: Text(
-                      item.toUpperCase(),
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 255, 255, 255),
-                        fontSize: 20,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit,
-                            color: Color.fromARGB(255, 255, 255, 255),
-                          ),
-                          onPressed: () => _editItem(index),
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete,
-                            color: Color.fromARGB(255, 255, 255, 255),
-                          ),
-                          onPressed: () => _deleteItem(index),
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(0, 3),
+                          blurRadius: 8,
                         ),
                       ],
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      title: Text(
+                        item.toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline_outlined,
+                          size: 30,
+                          color: Color.fromARGB(255, 154, 0, 0),
+                        ),
+                        onPressed: () => _deleteItem(index),
+                      ),
                     ),
                   ),
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addItem,
+        backgroundColor: Colors.green[600],
+        child: const Icon(Icons.add, color: Colors.white),
+        tooltip: 'Add Item',
+      ),
     );
   }
 }

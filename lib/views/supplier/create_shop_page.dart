@@ -104,7 +104,7 @@ class _CreateShopPageState extends State<CreateShopPage> {
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color.fromARGB(255, 255, 255, 255),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
