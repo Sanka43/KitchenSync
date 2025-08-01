@@ -28,6 +28,7 @@ class SupplierDashboard extends StatefulWidget {
 class _SupplierDashboardState extends State<SupplierDashboard> {
   int totalShops = 0;
   int totalItems = 0;
+  int receivedOrders = 0;
 
   @override
   void initState() {
@@ -37,19 +38,37 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
 
   Future<void> _fetchSummaryCounts() async {
     try {
+      final supplierId = FirebaseAuth.instance.currentUser!.uid;
+
+      // Fetch shops with supplierId == current user
       final shopsSnapshot = await FirebaseFirestore.instance
           .collection('shops')
+          .where('supplierId', isEqualTo: supplierId)
           .get();
-      final itemsSnapshot = await FirebaseFirestore.instance
-          .collection('items')
+
+      int itemCount = 0;
+
+      for (var doc in shopsSnapshot.docs) {
+        final data = doc.data();
+        final items = data['items'];
+        if (items is List) {
+          itemCount += items.length;
+        }
+      }
+
+      // Fetch orders for this specific shop
+      final ordersSnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('shopId', isEqualTo: widget.shopId)
           .get();
 
       setState(() {
         totalShops = shopsSnapshot.docs.length;
-        totalItems = itemsSnapshot.docs.length;
+        totalItems = itemCount;
+        receivedOrders = ordersSnapshot.docs.length;
       });
     } catch (e) {
-      print('Error fetching counts: $e');
+      print('Error fetching summary counts: $e');
     }
   }
 
@@ -68,18 +87,10 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
       backgroundColor: const Color(0xFFF9FAFB),
       drawer: _buildDrawer(context),
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Color(0xFF151640)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        title: Text(
-          widget.shopName,
-          style: GoogleFonts.poppins(
-            color: const Color(0xFF151640),
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -87,95 +98,78 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Welcome, ${widget.shopName}!',
+              widget.shopName,
               style: GoogleFonts.poppins(
-                color: const Color(0xFF151640),
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildSummaryCards(),
-            const SizedBox(height: 32),
-            Text(
-              'Recent Activity (Coming Soon)',
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
                 color: const Color(0xFF151640),
               ),
             ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Center(
-                child: Text(
-                  'Charts, logs, or task summaries can go here.',
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-              ),
+            const SizedBox(height: 4),
+            Text(
+              'Where Quality Meets Every Meal!',
+              style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[700]),
             ),
+            const SizedBox(height: 20),
+            _buildSummaryWidgets(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSummaryCards() {
+  Widget _buildSummaryWidgets() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildStatCard(Icons.store, 'Total Shops', totalShops, Colors.blue),
-        _buildStatCard(
-          Icons.inventory,
-          'Total Items',
-          totalItems,
-          Colors.green,
+        _summaryCard('Total Shops', totalShops, Icons.store, Colors.orange),
+        _summaryCard('Total Items', totalItems, Icons.inventory, Colors.teal),
+        _summaryCard(
+          'Orders',
+          receivedOrders,
+          Icons.shopping_cart,
+          Colors.indigo,
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(IconData icon, String label, int count, Color color) {
+  Widget _summaryCard(String label, int count, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.5),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+              color: Colors.grey.withOpacity(0.15),
+              spreadRadius: 2,
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 32, color: Colors.white),
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.1),
+              child: Icon(icon, color: color),
+            ),
             const SizedBox(height: 10),
             Text(
-              label,
-              textAlign: TextAlign.center,
+              count.toString(),
               style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.white70,
-                fontWeight: FontWeight.w600,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF151640),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
-              '$count',
-              style: GoogleFonts.poppins(
-                fontSize: 26,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+              label,
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[700]),
             ),
           ],
         ),
@@ -214,24 +208,24 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                 accountName: Text(
                   widget.shopName,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFF151640),
-                    fontWeight: FontWeight.bold,
                     fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF151640),
                   ),
                 ),
                 accountEmail: Text(
                   widget.shopContact,
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFF151640).withOpacity(0.8),
                     fontSize: 16,
+                    color: const Color(0xFF151640).withOpacity(0.8),
                   ),
                 ),
                 currentAccountPicture: CircleAvatar(
                   backgroundColor: Colors.blue.shade100,
                   child: const Icon(
                     Icons.store,
-                    color: Colors.blueAccent,
                     size: 44,
+                    color: Colors.blueAccent,
                   ),
                 ),
               ),
@@ -267,15 +261,15 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
     );
   }
 
-  Widget _drawerItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _drawerItem(IconData icon, String label, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF151640)),
       title: Text(
-        title,
+        label,
         style: GoogleFonts.poppins(
-          color: const Color(0xFF151640),
           fontSize: 17,
           fontWeight: FontWeight.w600,
+          color: const Color(0xFF151640),
         ),
       ),
       hoverColor: Colors.blue.shade50,

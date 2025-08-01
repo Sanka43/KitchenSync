@@ -45,7 +45,7 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
+        // centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
         title: Text(
           "Order List",
@@ -106,13 +106,13 @@ class _SupplierOrderListPageState extends State<SupplierOrderListPage> {
                     margin: const EdgeInsets.only(bottom: 20),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black12.withOpacity(0.08),
-                          blurRadius: 8,
+                          color: Colors.black.withOpacity(0.5),
                           offset: const Offset(0, 3),
+                          blurRadius: 8,
                         ),
                       ],
                     ),
