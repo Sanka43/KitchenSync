@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'items_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -158,91 +159,121 @@ class _ItemsListPageState extends State<ItemsListPage> {
               final name = data['itemName'] ?? 'Unnamed';
               final stock = data['stock'] ?? 0;
               final maxStock = data['maxStock'] ?? 100;
+              final itemId = doc.id;
 
-              final double percentage = (stock / maxStock)
-                  .clamp(0.0, 1.0)
-                  .toDouble();
+              return FutureBuilder<DatabaseEvent>(
+                future: FirebaseDatabase.instance.ref('weights/$itemId').once(),
+                builder: (context, rtdbSnapshot) {
+                  double? weight;
+                  if (rtdbSnapshot.connectionState == ConnectionState.done &&
+                      rtdbSnapshot.hasData &&
+                      rtdbSnapshot.data!.snapshot.value != null) {
+                    final val = rtdbSnapshot.data!.snapshot.value;
+                    if (val is Map) {
+                      weight = (val['weight'] as num?)?.toDouble();
+                    }
+                  }
 
-              Color progressColor;
-              if (percentage <= 0.25) {
-                progressColor = Colors.red;
-              } else if (percentage <= 0.5) {
-                progressColor = Colors.orange;
-              } else if (percentage <= 0.75) {
-                progressColor = Colors.yellow[700]!;
-              } else {
-                progressColor = Colors.green;
-              }
+                  final double percentage = (stock / maxStock)
+                      .clamp(0.0, 1.0)
+                      .toDouble();
+                  Color progressColor;
+                  if (percentage <= 0.25) {
+                    progressColor = Colors.red;
+                  } else if (percentage <= 0.5) {
+                    progressColor = Colors.orange;
+                  } else if (percentage <= 0.75) {
+                    progressColor = Colors.yellow[700]!;
+                  } else {
+                    progressColor = Colors.green;
+                  }
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  title: Text(
-                    name,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 6),
-                      Text(
-                        'Stock: $stock / $maxStock',
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      title: Text(
+                        name,
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.black87,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: LinearProgressIndicator(
-                          value: percentage,
-                          minHeight: 8,
-                          backgroundColor: const Color.fromARGB(60, 0, 0, 0),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            progressColor,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 6),
+                          Text(
+                            'Stock: $stock / $maxStock',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
                           ),
-                        ),
+                          if (weight != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Weight: ${weight.toStringAsFixed(2)} g',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.blueGrey[800],
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: LinearProgressIndicator(
+                              value: percentage,
+                              minHeight: 8,
+                              backgroundColor: const Color.fromARGB(
+                                60,
+                                0,
+                                0,
+                                0,
+                              ),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                progressColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  trailing: const Icon(Icons.edit, color: Colors.black54),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ItemPage(
-                          hotelId: widget.hotelId,
-                          docId: doc.id,
-                          initialName: name,
-                          initialStock: stock,
-                          initialMaxStock: maxStock,
-                        ),
-                      ),
-                    );
-                  },
-                  onLongPress: () =>
-                      _showDeleteConfirmation(context, doc.id, name),
-                ),
+                      trailing: const Icon(Icons.edit, color: Colors.black54),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ItemPage(
+                              hotelId: widget.hotelId,
+                              docId: doc.id,
+                              initialName: name,
+                              initialStock: stock,
+                              initialMaxStock: maxStock,
+                            ),
+                          ),
+                        );
+                      },
+                      onLongPress: () =>
+                          _showDeleteConfirmation(context, doc.id, name),
+                    ),
+                  );
+                },
               );
             },
           );

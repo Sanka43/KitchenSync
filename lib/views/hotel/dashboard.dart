@@ -3,10 +3,9 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_database/firebase_database.dart'; // Added
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pie_chart/pie_chart.dart' as pie;
-import 'package:fl_chart/fl_chart.dart';
 
 import '../../main.dart';
 import '../auth/login_page.dart';
@@ -14,6 +13,9 @@ import 'edit_profile_page.dart';
 import 'items_list_page.dart';
 import 'order_list_page.dart';
 import 'shop_list_page.dart';
+
+// Define your HOTEL_Id constant here
+const String HOTEL_Id = "5pj08bkQqhRZBv9oPzAuam2qidh2";
 
 class HotelDashboard extends StatefulWidget {
   const HotelDashboard({super.key});
@@ -33,26 +35,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
 
   List<Map<String, dynamic>> allStockItems = [];
   List<Map<String, dynamic>> lowStockItems = [];
-  Map<String, double> weightsData = {};
-
-  late DatabaseReference weightsRef;
-  StreamSubscription<DatabaseEvent>? weightsSubscription;
-
-  final Map<String, double> maxScales = {
-    'Chill_Powder': 1,
-    'Corn_Flour': 10,
-    'Rice': 10,
-    'Suger': 20,
-    'oil_liter': 3,
-  };
-
-  final List<Color> lineColors = [
-    Colors.redAccent,
-    Colors.blueAccent,
-    Colors.greenAccent,
-    Colors.orangeAccent,
-    Colors.purpleAccent,
-  ];
 
   @override
   void initState() {
@@ -71,7 +53,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
 
   @override
   void dispose() {
-    weightsSubscription?.cancel();
     routeObserver.unsubscribe(this);
     super.dispose();
   }
@@ -121,30 +102,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
       }).toList();
 
       await _fetchPendingOrders();
-
-      weightsRef = FirebaseDatabase.instance.ref('weights/$hotelId');
-      weightsSubscription = weightsRef.onValue.listen((event) {
-        final data = event.snapshot.value as Map<dynamic, dynamic>?;
-        final Map<String, double> parsed = {};
-
-        if (data != null) {
-          data.forEach((key, value) {
-            parsed[key.toString()] = double.tryParse(value.toString()) ?? 0;
-          });
-        } else {
-          parsed.addAll({
-            'Chill_Powder': 0,
-            'Corn_Flour': 0,
-            'Rice': 0,
-            'Suger': 0,
-            'oil_liter': 0,
-          });
-        }
-
-        setState(() {
-          weightsData = parsed;
-        });
-      });
 
       setState(() {
         itemCount = itemsSnap.size;
@@ -214,9 +171,10 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                         letterSpacing: 0.4,
                       ),
                     ),
-                    _buildStockLevelWidget(),
                     const SizedBox(height: 20),
-                    _buildWeightLineChart(),
+                    const IotWeightsWidget(), // <-- Added here
+                    const SizedBox(height: 24),
+                    _buildStockLevelWidget(),
                     const SizedBox(height: 24),
                     _buildSummaryCards(),
                     const SizedBox(height: 32),
@@ -331,172 +289,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
               ),
               legendPosition: pie.LegendPosition.right,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeightLineChart() {
-    final dataToShow = weightsData.isNotEmpty
-        ? weightsData
-        : {
-            'Chill_Powder': 0,
-            'Corn_Flour': 0,
-            'Rice': 0,
-            'Suger': 0,
-            'oil_liter': 0,
-          };
-
-    final Map<String, double> percentages = {};
-    dataToShow.forEach((key, value) {
-      final max = maxScales[key] ?? 1;
-      final pct = ((value / max) * 100).clamp(0, 100).toDouble();
-      percentages[key] = pct;
-    });
-
-    final itemCount = percentages.length;
-    List<LineChartBarData> lines = [];
-    int i = 0;
-    percentages.forEach((key, pct) {
-      lines.add(
-        LineChartBarData(
-          spots: [FlSpot(0, 0), FlSpot(itemCount.toDouble() - 1, pct)],
-          isCurved: true,
-          curveSmoothness: 0.3,
-          color: lineColors[i % lineColors.length],
-          barWidth: 3,
-          dotData: FlDotData(show: true),
-          belowBarData: BarAreaData(
-            show: true,
-            color: lineColors[i % lineColors.length].withOpacity(0.2),
-          ),
-        ),
-      );
-      i++;
-    });
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 700),
-      curve: Curves.easeInOut,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 16,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Weight Levels (%)',
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-          AspectRatio(
-            aspectRatio: 1.6,
-            child: LineChart(
-              LineChartData(
-                minY: 0,
-                maxY: 110,
-                minX: 0,
-                maxX: itemCount.toDouble() - 1,
-                lineTouchData: LineTouchData(enabled: true),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: 20,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.withOpacity(0.2),
-                    strokeWidth: 1,
-                    dashArray: [5, 5],
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        int index = value.toInt();
-                        if (index < 0 || index >= percentages.length) {
-                          return const SizedBox();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            percentages.keys.elementAt(index),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 20,
-                      getTitlesWidget: (value, meta) =>
-                          Text('${value.toInt()}%'),
-                    ),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
-                ),
-                lineBarsData: lines,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            children: percentages.entries.map((entry) {
-              final color =
-                  lineColors[percentages.keys.toList().indexOf(entry.key) %
-                      lineColors.length];
-              final isLow = entry.value < 25;
-              return Chip(
-                backgroundColor: color.withOpacity(0.15),
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${entry.key}: ${entry.value.toStringAsFixed(1)}%',
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (isLow) ...[
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: Colors.redAccent,
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }).toList(),
           ),
         ],
       ),
@@ -773,5 +565,141 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
       hoverColor: Colors.blue.shade50,
       onTap: onTap,
     );
+  }
+}
+
+class IotWeightsWidget extends StatefulWidget {
+  const IotWeightsWidget({Key? key}) : super(key: key);
+
+  @override
+  State<IotWeightsWidget> createState() => _IotWeightsWidgetState();
+}
+
+class _IotWeightsWidgetState extends State<IotWeightsWidget> {
+  final DatabaseReference _weightsRef = FirebaseDatabase.instance
+      .ref()
+      .child('hotels')
+      .child(HOTEL_Id)
+      .child('weights');
+
+  Map<String, dynamic> _weightsData = {};
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToWeights();
+  }
+
+  void _listenToWeights() {
+    _weightsRef.onValue.listen(
+      (event) {
+        final dataSnapshot = event.snapshot;
+        print('RTDB onValue event fired');
+        if (dataSnapshot.exists) {
+          print('Data snapshot exists: ${dataSnapshot.value}');
+          final data = Map<String, dynamic>.from(
+            dataSnapshot.value as Map<dynamic, dynamic>,
+          );
+          setState(() {
+            _weightsData = data;
+            _loading = false;
+            _error = null;
+          });
+        } else {
+          print('Data snapshot does NOT exist');
+          setState(() {
+            _weightsData = {};
+            _loading = false;
+            _error = 'No data found';
+          });
+        }
+      },
+      onError: (error) {
+        print('RTDB listener error: $error');
+        setState(() {
+          _loading = false;
+          _error = error.toString();
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Text(
+          'Error: $_error',
+          style: GoogleFonts.poppins(color: Colors.red),
+        ),
+      );
+    }
+    if (_weightsData.isEmpty) {
+      return Center(
+        child: Text('No weight data available', style: GoogleFonts.poppins()),
+      );
+    }
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'IoT Weight Data',
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._weightsData.entries.map((entry) {
+              final key = entry.key;
+              final value = entry.value;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatKey(key),
+                      style: GoogleFonts.poppins(fontSize: 16),
+                    ),
+                    Text(
+                      value.toString(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatKey(String key) {
+    return key
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map(
+          (word) => word.isEmpty
+              ? ''
+              : word[0].toUpperCase() + word.substring(1).toLowerCase(),
+        )
+        .join(' ');
   }
 }

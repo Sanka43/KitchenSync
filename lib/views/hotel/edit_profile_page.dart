@@ -50,7 +50,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    await FirebaseFirestore.instance.collection('hotels').doc(uid).set({
+    final docRef = FirebaseFirestore.instance.collection('hotels').doc(uid);
+    final doc = await docRef.get();
+
+    String hotelId;
+    if (doc.exists) {
+      hotelId = doc.data()?['hotelId'] ?? uid; // fallback to uid
+    } else {
+      // Generate a unique hotelId
+      hotelId = 'H-${DateTime.now().millisecondsSinceEpoch}';
+    }
+
+    await docRef.set({
+      'hotelId': hotelId,
       'hotelName': _hotelNameController.text.trim(),
       'location': _locationController.text.trim(),
       'contactNumber': _contactController.text.trim(),
