@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:pie_chart/pie_chart.dart';
+import 'package:pie_chart/pie_chart.dart' as pie;
+import 'package:fl_chart/fl_chart.dart';
 
+import '../../main.dart';
 import '../auth/login_page.dart';
 import 'edit_profile_page.dart';
 import 'items_list_page.dart';
@@ -18,22 +22,63 @@ class HotelDashboard extends StatefulWidget {
   State<HotelDashboard> createState() => _HotelDashboardState();
 }
 
-class _HotelDashboardState extends State<HotelDashboard> {
-  String? hotelId;
+class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
+  bool isLoading = true;
   String hotelName = '';
+  String? hotelId;
   String location = '';
   int itemCount = 0;
   int shopCount = 0;
   int pendingOrderCount = 0;
-  bool isLoading = true;
-  List<Map<String, dynamic>> lowStockItems = [];
+
   List<Map<String, dynamic>> allStockItems = [];
+  List<Map<String, dynamic>> lowStockItems = [];
+  Map<String, double> weightsData = {};
+
+  late DatabaseReference weightsRef;
+  StreamSubscription<DatabaseEvent>? weightsSubscription;
+
+  final Map<String, double> maxScales = {
+    'Chill_Powder': 1,
+    'Corn_Flour': 10,
+    'Rice': 10,
+    'Suger': 20,
+    'oil_liter': 3,
+  };
+
+  final List<Color> lineColors = [
+    Colors.redAccent,
+    Colors.blueAccent,
+    Colors.greenAccent,
+    Colors.orangeAccent,
+    Colors.purpleAccent,
+  ];
 
   @override
   void initState() {
     super.initState();
     loadCounts();
-    _fetchPendingOrders();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    weightsSubscription?.cancel();
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    loadCounts();
   }
 
   Future<void> loadCounts() async {
@@ -47,7 +92,6 @@ class _HotelDashboardState extends State<HotelDashboard> {
           .collection('users')
           .doc(hotelId)
           .get();
-
       hotelName = userDoc.data()?['username'] ?? '';
       location = userDoc.data()?['location'] ?? '';
 
@@ -61,7 +105,6 @@ class _HotelDashboardState extends State<HotelDashboard> {
           .where('location', isEqualTo: location)
           .get();
 
-      // Store all stock items
       allStockItems = itemsSnap.docs.map((doc) {
         final data = doc.data();
         return {
@@ -71,12 +114,37 @@ class _HotelDashboardState extends State<HotelDashboard> {
         };
       }).toList();
 
-      // Calculate low stock items
       lowStockItems = allStockItems.where((item) {
         final int stock = item['stock'] ?? 0;
         final int maxStock = item['maxStock'] ?? 1;
         return maxStock > 0 && stock < maxStock * 0.25;
       }).toList();
+
+      await _fetchPendingOrders();
+
+      weightsRef = FirebaseDatabase.instance.ref('weights/$hotelId');
+      weightsSubscription = weightsRef.onValue.listen((event) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>?;
+        final Map<String, double> parsed = {};
+
+        if (data != null) {
+          data.forEach((key, value) {
+            parsed[key.toString()] = double.tryParse(value.toString()) ?? 0;
+          });
+        } else {
+          parsed.addAll({
+            'Chill_Powder': 0,
+            'Corn_Flour': 0,
+            'Rice': 0,
+            'Suger': 0,
+            'oil_liter': 0,
+          });
+        }
+
+        setState(() {
+          weightsData = parsed;
+        });
+      });
 
       setState(() {
         itemCount = itemsSnap.size;
@@ -112,7 +180,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB), // softer white
+      backgroundColor: const Color(0xFFF9FAFB),
       drawer: _buildDrawer(context),
       appBar: AppBar(
         iconTheme: const IconThemeData(color: Color(0xFF151640)),
@@ -138,7 +206,7 @@ class _HotelDashboardState extends State<HotelDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome, $hotelName!',
+                      'Welcome, ${hotelName.isNotEmpty ? hotelName : 'Guest'}!',
                       style: GoogleFonts.poppins(
                         color: const Color(0xFF151640),
                         fontSize: 28,
@@ -146,8 +214,9 @@ class _HotelDashboardState extends State<HotelDashboard> {
                         letterSpacing: 0.4,
                       ),
                     ),
-                    const SizedBox(height: 20),
                     _buildStockLevelWidget(),
+                    const SizedBox(height: 20),
+                    _buildWeightLineChart(),
                     const SizedBox(height: 24),
                     _buildSummaryCards(),
                     const SizedBox(height: 32),
@@ -163,13 +232,24 @@ class _HotelDashboardState extends State<HotelDashboard> {
   Widget _buildStockLevelWidget() {
     Map<String, double> dataMap = {};
 
+    List<MapEntry<String, double>> percentageList = [];
+
     for (var item in allStockItems) {
       final String name = item['name'] ?? 'Unnamed';
       final int stock = item['stock'] ?? 0;
       final int maxStock = item['maxStock'] ?? 1;
       if (maxStock <= 0) continue;
+
       final double percentage = (stock / maxStock) * 100;
-      dataMap[name] = percentage;
+      percentageList.add(MapEntry(name, percentage));
+    }
+
+    // Sort and take lowest 5 stock percentages
+    percentageList.sort((a, b) => a.value.compareTo(b.value));
+    final limitedList = percentageList.take(5);
+
+    for (var entry in limitedList) {
+      dataMap[entry.key] = entry.value;
     }
 
     if (dataMap.isEmpty) {
@@ -177,36 +257,37 @@ class _HotelDashboardState extends State<HotelDashboard> {
         margin: const EdgeInsets.symmetric(vertical: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.transparent,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12.withOpacity(0.1),
+              color: Colors.black12.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Text(
-          'No item stock data available.',
-          style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+        child: Center(
+          child: Text(
+            'No item stock data available.',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: const Color.fromARGB(255, 37, 37, 37),
+            ),
+          ),
         ),
       );
     }
 
     return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(
-          0,
-          255,
-          255,
-          255,
-        ), // white with opacity, 0),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromARGB(0, 0, 0, 0),
+            color: Colors.black12.withOpacity(0.05),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -215,41 +296,207 @@ class _HotelDashboardState extends State<HotelDashboard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Text(
-          //   'Stock Levels',
-          //   style: GoogleFonts.poppins(
-          //     fontSize: 20,
-          //     fontWeight: FontWeight.w600,
-          //     color: const Color(0xFF151640),
-          //   ),
-          // ),
-          // const SizedBox(height: 12),
-          PieChart(
+          Text(
+            'Stock Level Overview (Lowest 5 Items)',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF151640),
+            ),
+          ),
+          const SizedBox(height: 16),
+          pie.PieChart(
             dataMap: dataMap,
             animationDuration: const Duration(milliseconds: 900),
-            chartType: ChartType.ring,
+            chartType: pie.ChartType.ring,
             chartRadius: MediaQuery.of(context).size.width / 2.5,
             ringStrokeWidth: 26,
-            chartValuesOptions: const ChartValuesOptions(
+            chartValuesOptions: const pie.ChartValuesOptions(
               showChartValuesInPercentage: true,
               showChartValues: true,
               decimalPlaces: 1,
               chartValueBackgroundColor: Colors.transparent,
               chartValueStyle: TextStyle(
                 color: Color(0xFF151640),
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            legendOptions: const LegendOptions(
+            legendOptions: const pie.LegendOptions(
               showLegends: true,
               legendTextStyle: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF151640),
               ),
-              legendPosition: LegendPosition.right,
+              legendPosition: pie.LegendPosition.right,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeightLineChart() {
+    final dataToShow = weightsData.isNotEmpty
+        ? weightsData
+        : {
+            'Chill_Powder': 0,
+            'Corn_Flour': 0,
+            'Rice': 0,
+            'Suger': 0,
+            'oil_liter': 0,
+          };
+
+    final Map<String, double> percentages = {};
+    dataToShow.forEach((key, value) {
+      final max = maxScales[key] ?? 1;
+      final pct = ((value / max) * 100).clamp(0, 100).toDouble();
+      percentages[key] = pct;
+    });
+
+    final itemCount = percentages.length;
+    List<LineChartBarData> lines = [];
+    int i = 0;
+    percentages.forEach((key, pct) {
+      lines.add(
+        LineChartBarData(
+          spots: [FlSpot(0, 0), FlSpot(itemCount.toDouble() - 1, pct)],
+          isCurved: true,
+          curveSmoothness: 0.3,
+          color: lineColors[i % lineColors.length],
+          barWidth: 3,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(
+            show: true,
+            color: lineColors[i % lineColors.length].withOpacity(0.2),
+          ),
+        ),
+      );
+      i++;
+    });
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeInOut,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Weight Levels (%)',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          AspectRatio(
+            aspectRatio: 1.6,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: 110,
+                minX: 0,
+                maxX: itemCount.toDouble() - 1,
+                lineTouchData: LineTouchData(enabled: true),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 20,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.withOpacity(0.2),
+                    strokeWidth: 1,
+                    dashArray: [5, 5],
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        int index = value.toInt();
+                        if (index < 0 || index >= percentages.length) {
+                          return const SizedBox();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            percentages.keys.elementAt(index),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 20,
+                      getTitlesWidget: (value, meta) =>
+                          Text('${value.toInt()}%'),
+                    ),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                ),
+                lineBarsData: lines,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: percentages.entries.map((entry) {
+              final color =
+                  lineColors[percentages.keys.toList().indexOf(entry.key) %
+                      lineColors.length];
+              final isLow = entry.value < 25;
+              return Chip(
+                backgroundColor: color.withOpacity(0.15),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${entry.key}: ${entry.value.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (isLow) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: Colors.redAccent,
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),

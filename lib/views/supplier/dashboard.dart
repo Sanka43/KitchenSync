@@ -8,6 +8,7 @@ import '../auth/login_page.dart';
 import 'create_shop_page.dart';
 import 'product_list.dart';
 import 'supplier_order_list_page.dart';
+import 'supplier_report_page.dart';
 
 class SupplierDashboard extends StatefulWidget {
   final String shopId;
@@ -361,6 +362,18 @@ class _SupplierDashboardState extends State<SupplierDashboard> {
                   ),
                 );
               }),
+              _drawerItem(Icons.insert_chart_outlined, 'Report', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SupplierReportPage(
+                      shopId: widget.shopId,
+                      shopName: widget.shopName,
+                    ),
+                  ),
+                );
+              }),
+
               const Divider(thickness: 1, indent: 20, endIndent: 20),
               _drawerItem(Icons.logout_rounded, 'Logout', _logout),
             ],

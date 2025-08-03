@@ -195,8 +195,8 @@ class _ItemListState extends State<ItemList> {
       floatingActionButton: FloatingActionButton(
         onPressed: _addItem,
         backgroundColor: Colors.green[600],
-        child: const Icon(Icons.add, color: Colors.white),
         tooltip: 'Add Item',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

@@ -3,6 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:kitchensync/views/auth/splash_screen.dart';
 import 'firebase_options.dart';
 
+/// 👇 Add RouteObserver
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -11,11 +14,13 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Smart Kitchen Inventory',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver], // 👈 Add this line
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF121212),
         textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),

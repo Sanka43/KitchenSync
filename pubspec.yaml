@@ -44,6 +44,10 @@ dependencies:
   firebase_storage: ^11.7.7
   pie_chart: ^5.1.0
   flutter_local_notifications: ^19.4.0
+  pdf: ^3.11.3
+  printing: ^5.13.1
+  flutter_launcher_icons: ^0.14.4
+  fl_chart: ^1.0.0
 
 dev_dependencies:
   flutter_test:
@@ -62,9 +66,13 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    # - assets/icons/lunch_icon.jpg
     - assets/background.jpg
     - assets/dashboard_backgraund_2.jpg
     - assets/dashboard_backgraund_2.jpg
   uses-material-design: true
 
-  
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/lunch_icon.jpg"
