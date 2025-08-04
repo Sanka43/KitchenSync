@@ -14,6 +14,7 @@ import 'edit_profile_page.dart';
 import 'items_list_page.dart';
 import 'order_list_page.dart';
 import 'shop_list_page.dart';
+import 'report_page.dart'; // adjust the path as needed
 
 class HotelDashboard extends StatefulWidget {
   const HotelDashboard({super.key});
@@ -39,10 +40,10 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
   StreamSubscription<DatabaseEvent>? weightsSubscription;
 
   final Map<String, double> maxScales = {
-    'Chill_Powder': 1,
-    'Corn_Flour': 10,
-    'Rice': 20,
-    'Suger': 10,
+    'chili_powder': 1,
+    'corn_flour': 10,
+    'rice': 20,
+    'sugar': 10,
     'oil_liter': 4,
   };
 
@@ -120,23 +121,35 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
 
       await _fetchPendingOrders();
 
-      // Corrected RTDB path: hotels/{hotelId}/weights
       weightsRef = FirebaseDatabase.instance.ref('hotels/$rtdbHotelId/weights');
       weightsSubscription = weightsRef.onValue.listen((event) {
         final data = event.snapshot.value as Map<dynamic, dynamic>?;
 
-        final Map<String, double> parsed = {};
+        final Map<String, double> parsed = {
+          'chili_powder': 0,
+          'corn_flour': 0,
+          'rice': 0,
+          'sugar': 0,
+          'oil_liter': 0,
+        };
+
         if (data != null) {
           data.forEach((key, value) {
-            parsed[key.toString()] = double.tryParse(value.toString()) ?? 0;
-          });
-        } else {
-          parsed.addAll({
-            'Chill_Powder': 0,
-            'Corn_Flour': 0,
-            'Rice': 0,
-            'Suger': 0,
-            'oil_liter': 0,
+            final normalizedKey = key.toString().toLowerCase().replaceAll(
+              ' ',
+              '_',
+            );
+            switch (normalizedKey) {
+              case 'chili_powder':
+              case 'corn_flour':
+              case 'rice':
+              case 'sugar':
+              case 'oil_liter':
+                parsed[normalizedKey] = double.tryParse(value.toString()) ?? 0;
+                break;
+              default:
+                break;
+            }
           });
         }
 
@@ -260,6 +273,13 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
     );
   }
 
+  Widget _buildBarChart(
+    Map<String, double> weightsData,
+    Map<String, double> maxScales,
+  ) {
+    return AnimatedLowBarChart(weightsData: weightsData, maxScales: maxScales);
+  }
+
   Widget _buildStockLevelWidget() {
     Map<String, double> dataMap = {};
     List<MapEntry<String, double>> percentageList = [];
@@ -335,34 +355,27 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
             chartValuesOptions: const pie.ChartValuesOptions(
               showChartValuesInPercentage: true,
               showChartValues: true,
-              decimalPlaces: 1,
+              decimalPlaces: 0,
               chartValueBackgroundColor: Colors.transparent,
               chartValueStyle: TextStyle(
                 color: Color(0xFF151640),
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
             legendOptions: const pie.LegendOptions(
               showLegends: true,
               legendTextStyle: TextStyle(
-                fontSize: 20,
+                fontSize: 14,
                 fontWeight: FontWeight.w400,
                 color: Color(0xFF151640),
               ),
-              legendPosition: pie.LegendPosition.left,
+              legendPosition: pie.LegendPosition.right,
             ),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildBarChart(
-    Map<String, double> weightsData,
-    Map<String, double> maxScales,
-  ) {
-    return AnimatedLowBarChart(weightsData: weightsData, maxScales: maxScales);
   }
 
   Widget _buildLowStockWidget() {
@@ -598,6 +611,13 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                   ),
                 );
               }),
+              _drawerItem(Icons.picture_as_pdf, 'Generate Report', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportPage()),
+                );
+              }),
+
               const Divider(thickness: 1, indent: 20, endIndent: 20),
               _drawerItem(Icons.edit, 'Edit Profile', () {
                 Navigator.push(

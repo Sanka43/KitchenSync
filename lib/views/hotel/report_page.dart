@@ -9,21 +9,14 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-class SupplierReportPage extends StatefulWidget {
-  final String shopId;
-  final String shopName;
-
-  const SupplierReportPage({
-    super.key,
-    required this.shopId,
-    required this.shopName,
-  });
+class ReportPage extends StatefulWidget {
+  const ReportPage({super.key});
 
   @override
-  State<SupplierReportPage> createState() => _SupplierReportPageState();
+  State<ReportPage> createState() => _ReportPageState();
 }
 
-class _SupplierReportPageState extends State<SupplierReportPage> {
+class _ReportPageState extends State<ReportPage> {
   String filterType = 'day';
   DateTimeRange? customRange;
   bool isLoading = false;
@@ -47,26 +40,16 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
       start = customRange!.start;
       end = customRange!.end.add(const Duration(days: 1));
     } else {
-      setState(() => isLoading = false);
       return;
     }
 
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('history')
-          .where('shopId', isEqualTo: widget.shopId)
-          .where(
-            'confirmedAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(start),
-          )
-          .where('confirmedAt', isLessThan: Timestamp.fromDate(end))
-          .get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('history')
+        .where('confirmedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('confirmedAt', isLessThan: Timestamp.fromDate(end))
+        .get();
 
-      reportData = snapshot.docs;
-    } catch (e) {
-      print('🔥 Fetch error: $e');
-    }
-
+    reportData = snapshot.docs;
     setState(() => isLoading = false);
   }
 
@@ -79,7 +62,13 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
           .collection('hotels')
           .doc(data['hotelId'])
           .get();
+      final shopSnapshot = await FirebaseFirestore.instance
+          .collection('shops')
+          .doc(data['shopId'])
+          .get();
+
       final hotelName = hotelSnapshot.data()?['hotelName'] ?? 'Unknown Hotel';
+      final shopName = shopSnapshot.data()?['name'] ?? 'Unknown Shop';
       final confirmedAt = (data['confirmedAt'] as Timestamp).toDate();
       final formattedDate = DateFormat('yyyy-MM-dd HH:mm').format(confirmedAt);
       final items = List<Map<String, dynamic>>.from(data['items']);
@@ -92,7 +81,7 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'Supplier Report',
+                  'Delivery Report',
                   style: pw.TextStyle(
                     fontSize: 24,
                     fontWeight: pw.FontWeight.bold,
@@ -100,7 +89,7 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
                 ),
                 pw.SizedBox(height: 10),
                 pw.Text('Hotel: $hotelName'),
-                pw.Text('Shop: ${widget.shopName}'),
+                pw.Text('Shop: $shopName'),
                 pw.Text('Status: ${data['status']}'),
                 pw.Text('Confirmed At: $formattedDate'),
                 pw.SizedBox(height: 10),
@@ -121,23 +110,126 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
     return pdf.save();
   }
 
+  void showOrderDetails(Map<String, dynamic> data) async {
+    final hotelSnapshot = await FirebaseFirestore.instance
+        .collection('hotels')
+        .doc(data['hotelId'])
+        .get();
+    final shopSnapshot = await FirebaseFirestore.instance
+        .collection('shops')
+        .doc(data['shopId'])
+        .get();
+    final hotelName = hotelSnapshot.data()?['hotelName'] ?? 'Unknown Hotel';
+    final shopName = shopSnapshot.data()?['name'] ?? 'Unknown Shop';
+    final items = List<Map<String, dynamic>>.from(data['items']);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(
+        0.3,
+      ), // blurred semi-transparent background
+      builder: (context) => Dialog(
+        backgroundColor:
+            Colors.transparent, // transparent to show blurred content
+        insetPadding: const EdgeInsets.all(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Report Details',
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF151640),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Hotel: $hotelName',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: const Color(0xFF151640),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Shop: $shopName',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: const Color(0xFF151640),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Divider(color: Colors.grey.shade700),
+                ...items.map(
+                  (item) => Text(
+                    '• ${item['itemId']} - Qty: ${item['quantity']}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: const Color(0xFF151640),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Status: ${data['status']}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: const Color(0xFF151640),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      backgroundColor: Colors.grey.shade300,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF151640),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F3F6),
       appBar: AppBar(
         title: Text(
-          'Supplier Report',
-          style: GoogleFonts.poppins(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
+          'Generate Report',
+          style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        // centerTitle: true,
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -220,9 +312,8 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
               ),
             ),
             const SizedBox(height: 20),
-            if (isLoading)
-              const CircularProgressIndicator()
-            else if (reportData.isNotEmpty)
+            if (isLoading) const CircularProgressIndicator(),
+            if (!isLoading && reportData.isNotEmpty)
               Expanded(
                 child: Column(
                   children: [
@@ -234,52 +325,56 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
                               reportData[index].data() as Map<String, dynamic>;
                           final timestamp = (data['confirmedAt'] as Timestamp)
                               .toDate();
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        "Status: ${data['status']}",
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        "Confirmed: ${DateFormat('yyyy-MM-dd HH:mm').format(timestamp)}",
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 13,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ],
+                          return GestureDetector(
+                            onTap: () => showOrderDetails(data),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
                                   ),
-                                ),
-                                const Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  size: 16,
-                                  color: Colors.black54,
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          "Status: ${data['status']}",
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Confirmed: ${DateFormat('yyyy-MM-dd HH:mm').format(timestamp)}",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: 16,
+                                    color: Colors.black54,
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -312,7 +407,7 @@ class _SupplierReportPageState extends State<SupplierReportPage> {
                         final pdfData = await generatePDF();
                         await Printing.sharePdf(
                           bytes: pdfData,
-                          filename: 'supplier_report.pdf',
+                          filename: 'report.pdf',
                         );
                       },
                     ),
