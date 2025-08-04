@@ -225,11 +225,15 @@ class _ReportPageState extends State<ReportPage> {
       appBar: AppBar(
         title: Text(
           'Generate Report',
-          style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w600),
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF151640),
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

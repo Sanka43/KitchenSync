@@ -355,7 +355,7 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
             chartValuesOptions: const pie.ChartValuesOptions(
               showChartValuesInPercentage: true,
               showChartValues: true,
-              decimalPlaces: 0,
+              decimalPlaces: 1,
               chartValueBackgroundColor: Colors.transparent,
               chartValueStyle: TextStyle(
                 color: Color(0xFF151640),
