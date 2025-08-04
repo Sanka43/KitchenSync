@@ -1,11 +1,10 @@
-// imports remain unchanged
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'register_page.dart';
 import '../../services/auth_service.dart';
 import '../hotel/dashboard.dart';
 import '../supplier/create_shop_page.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -21,14 +20,18 @@ class _LoginPageState extends State<LoginPage> {
 
   bool isLoading = false;
   bool _hovering = false;
-  double _beforeOffset = -100;
   bool _rememberMe = false;
   bool _obscurePassword = true;
 
   @override
-  Widget build(BuildContext context) {
-    const green = Color(0xFF1BFD9C);
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -107,8 +110,8 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-                      Text(
-                        'Frogot your password',
+                      const Text(
+                        'Forgot your password',
                         style: TextStyle(color: Colors.white70, fontSize: 15),
                       ),
                     ],
@@ -123,36 +126,51 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email and Password cannot be empty')),
+      );
+      return;
+    }
+
     setState(() {
       isLoading = true;
     });
 
-    final response = await authService.loginUser(
-      email: emailController.text.trim(),
-      password: passwordController.text.trim(),
-    );
-
-    setState(() {
-      isLoading = false;
-    });
-
-    if (response['success'] == true) {
-      String role = response['role'];
-      if (role == 'hotel') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HotelDashboard()),
-        );
-      } else if (role == 'supplier') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const CreateShopPage()),
+    try {
+      final response = await authService.loginUser(
+        email: email,
+        password: password,
+      );
+      if (response['success'] == true) {
+        String role = response['role'];
+        if (role == 'hotel') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HotelDashboard()),
+          );
+        } else if (role == 'supplier') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const CreateShopPage()),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['error'] ?? 'Login failed')),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['error'] ?? 'Login failed')),
-      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login error: $e')));
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
@@ -164,89 +182,55 @@ class _LoginPageState extends State<LoginPage> {
     const green = Color(0xFF1BFD9C);
 
     return MouseRegion(
-      onEnter: (_) => setState(() {
-        _hovering = true;
-        _beforeOffset = 300;
-      }),
-      onExit: (_) => setState(() {
-        _hovering = false;
-        _beforeOffset = -100;
-      }),
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
       child: GestureDetector(
         onTap: isLoading ? null : onPressed,
-        child: Stack(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: green, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: green.withOpacity(_hovering ? 0.2 : 0.1),
-                    blurRadius: 9,
-                    spreadRadius: 3,
-                  ),
-                  BoxShadow(
-                    color: green.withOpacity(_hovering ? 0.6 : 0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 0),
-                  ),
-                ],
-                gradient: const LinearGradient(
-                  colors: [
-                    Color.fromRGBO(27, 253, 156, 0.1),
-                    Colors.transparent,
-                    Colors.transparent,
-                    Color.fromRGBO(27, 253, 156, 0.1),
-                  ],
-                  stops: [0.01, 0.4, 0.6, 1.0],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: green, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: green.withOpacity(_hovering ? 0.25 : 0.1),
+                blurRadius: 9,
+                spreadRadius: 3,
               ),
-              child: isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      text,
-                      style: TextStyle(
-                        color: _hovering
-                            ? const Color(0xFF82FFC9)
-                            : const Color.fromARGB(255, 27, 253, 156),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+              BoxShadow(
+                color: green.withOpacity(_hovering ? 0.6 : 0.4),
+                blurRadius: 10,
+              ),
+            ],
+            gradient: const LinearGradient(
+              colors: [
+                Color.fromRGBO(27, 253, 156, 0.1),
+                Colors.transparent,
+                Colors.transparent,
+                Color.fromRGBO(27, 253, 156, 0.1),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 400),
-              top: 0,
-              bottom: 0,
-              left: _beforeOffset,
-              child: Container(
-                width: 100,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      green.withOpacity(0.1),
-                      green.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.4, 0.6, 1.0],
+          ),
+          child: isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Text(
+                  text,
+                  style: TextStyle(
+                    color: _hovering ? const Color(0xFF82FFC9) : green,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -260,10 +244,10 @@ class _LoginPageState extends State<LoginPage> {
     return TextField(
       controller: controller,
       obscureText: isPassword ? _obscurePassword : false,
-      style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+        hintStyle: const TextStyle(color: Colors.white70),
         filled: true,
         fillColor: Colors.white.withOpacity(0.1),
         border: OutlineInputBorder(

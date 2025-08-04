@@ -41,9 +41,9 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
   final Map<String, double> maxScales = {
     'Chill_Powder': 1,
     'Corn_Flour': 10,
-    'Rice': 10,
-    'Suger': 20,
-    'oil_liter': 3,
+    'Rice': 20,
+    'Suger': 10,
+    'oil_liter': 4,
   };
 
   @override
@@ -208,7 +208,7 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                       '${hotelName.isNotEmpty ? hotelName : 'Guest'}!',
                       style: GoogleFonts.poppins(
                         color: const Color(0xFF151640),
-                        fontSize: 28,
+                        fontSize: 48,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.4,
                       ),
@@ -221,7 +221,7 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                           'Stock Level Overview ',
                           style: GoogleFonts.poppins(
                             fontSize: 20,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             color: const Color(0xFF151640),
                           ),
                         ),
@@ -237,7 +237,7 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                       'RTDB Weights',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: const Color(0xFF151640),
                       ),
                     ),
@@ -248,7 +248,7 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
                       'Low Stock Items',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: const Color(0xFF151640),
                       ),
                     ),
@@ -339,18 +339,18 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
               chartValueBackgroundColor: Colors.transparent,
               chartValueStyle: TextStyle(
                 color: Color(0xFF151640),
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             legendOptions: const pie.LegendOptions(
               showLegends: true,
               legendTextStyle: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
                 color: Color(0xFF151640),
               ),
-              legendPosition: pie.LegendPosition.right,
+              legendPosition: pie.LegendPosition.left,
             ),
           ),
         ],
@@ -369,14 +369,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Low Stock Items',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF151640),
-          ),
-        ),
         const SizedBox(height: 16),
         if (lowStockItems.isEmpty)
           Container(
@@ -638,7 +630,6 @@ class _HotelDashboardState extends State<HotelDashboard> with RouteAware {
   }
 }
 
-// Animated bar chart with pulsing bars below 25%
 class AnimatedLowBarChart extends StatefulWidget {
   final Map<String, double> weightsData;
   final Map<String, double> maxScales;
@@ -695,11 +686,11 @@ class _AnimatedLowBarChartState extends State<AnimatedLowBarChart>
     final dataToShow = widget.weightsData.isNotEmpty
         ? widget.weightsData
         : {
-            'Chill_Powder': 0.5,
-            'Corn_Flour': 8,
-            'Rice': 13,
-            'Suger': 3,
-            'oil_liter': 2.5,
+            'Chill_Powder': 0,
+            'Corn_Flour': 0,
+            'Rice': 0,
+            'Suger': 0,
+            'oil_liter': 0,
           };
 
     final Map<String, double> percentages = {};

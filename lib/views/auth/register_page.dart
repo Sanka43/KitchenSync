@@ -24,8 +24,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xFF1BFD9C);
-
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
